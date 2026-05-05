@@ -15,9 +15,7 @@ services:
       retries: 5
 
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    image: ghcr.io/${GHCR_OWNER}/treatyiq-backend:latest
     restart: always
     volumes:
       - media_data:/app/media
@@ -33,11 +31,7 @@ services:
              gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 4 --timeout 120"
 
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      args:
-        - VITE_API_URL=${VITE_API_URL}
+    image: ghcr.io/${GHCR_OWNER}/treatyiq-frontend:latest
     restart: always
     depends_on:
       - backend

@@ -150,7 +150,7 @@ jobs:
   # ─────────────────────────────────────────
   deploy:
     name: Deploy — Production
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     needs: docker-build
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     environment: production
@@ -158,25 +158,35 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_SSH_KEY }}
-          envs: AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY,AWS_STORAGE_BUCKET_NAME
-          script: |
-            cd /opt/treatyiq
+      - name: Deploy
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_STORAGE_BUCKET_NAME: ${{ secrets.AWS_STORAGE_BUCKET_NAME }}
+          GHCR_OWNER: ${{ secrets.GHCR_OWNER }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
+        run: |
+          set -e
 
-            # Tulis ulang variabel S3 ke .env production
-            sed -i "s|^USE_S3=.*|USE_S3=True|" .env
-            sed -i "s|^AWS_ACCESS_KEY_ID=.*|AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}|" .env
-            sed -i "s|^AWS_SECRET_ACCESS_KEY=.*|AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}|" .env
-            sed -i "s|^AWS_STORAGE_BUCKET_NAME=.*|AWS_STORAGE_BUCKET_NAME=${AWS_STORAGE_BUCKET_NAME}|" .env
+          # Append secrets ke .env — Docker Compose pakai nilai terakhir jika duplikat
+          ENV_FILE=/opt/treatyiq/.env
+          mkdir -p /opt/treatyiq
+          touch $ENV_FILE
+          cat >> $ENV_FILE << EOF
+          USE_S3=True
+          AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+          AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+          AWS_STORAGE_BUCKET_NAME=${AWS_STORAGE_BUCKET_NAME}
+          GHCR_OWNER=${GHCR_OWNER}
+          EOF
 
-            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-            docker compose -f docker-compose.prod.yml pull
-            docker compose -f docker-compose.prod.yml up -d --remove-orphans
-            docker compose -f docker-compose.prod.yml exec -T backend python manage.py migrate
-            docker image prune -f
-            echo "✅ Deployment complete: $(date)"
+          # Copy .env ke workspace agar env_file: .env di compose bisa resolve
+          cp $ENV_FILE .env
+
+          echo "${GITHUB_TOKEN}" | docker login ghcr.io -u "${GITHUB_ACTOR}" --password-stdin
+          docker compose -f docker-compose.prod.yml pull
+          docker compose -f docker-compose.prod.yml up -d --remove-orphans
+          docker compose -f docker-compose.prod.yml exec -T backend python manage.py migrate
+          docker image prune -f
+          echo "✅ Deployment complete: $(date)"
