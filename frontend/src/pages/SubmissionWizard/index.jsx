@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { CheckCircle } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { createSubmission } from '../../api/submissions'
+import { uploadDocument } from '../../api/documents'
 import Step1Vendor from './Step1Vendor'
 import Step2Income from './Step2Income'
 import Step3Compliance from './Step3Compliance'
@@ -20,16 +21,11 @@ export default function SubmissionWizard() {
   const [step, setStep] = useState(0)
   const [formData, setFormData] = useState({})
   const [result, setResult] = useState(null)
+  const [isUploading, setIsUploading] = useState(false)
   const qc = useQueryClient()
 
   const mutation = useMutation({
     mutationFn: (data) => createSubmission(data),
-    onSuccess: ({ data }) => {
-      setResult(data)
-      setStep(4)
-      qc.invalidateQueries({ queryKey: ['dashboard-stats'] })
-      qc.invalidateQueries({ queryKey: ['submissions'] })
-    },
     onError: (err) => {
       const detail = err.response?.data
       if (typeof detail === 'object') {
@@ -50,14 +46,59 @@ export default function SubmissionWizard() {
 
   const prev = () => setStep((s) => s - 1)
 
-  const submit = (docData) => {
-    const payload = { ...formData, ...docData }
-    mutation.mutate(payload)
+  // files: { docType: File }
+  const submit = async (files) => {
+    const payload = { ...formData }
+    let submission
+    try {
+      const res = await mutation.mutateAsync(payload)
+      submission = res.data
+    } catch {
+      return
+    }
+
+    const fileEntries = Object.entries(files)
+    if (fileEntries.length > 0) {
+      setIsUploading(true)
+      const uploadToast = toast.loading(`Mengunggah ${fileEntries.length} dokumen...`)
+      let failed = 0
+
+      await Promise.allSettled(
+        fileEntries.map(async ([docType, file]) => {
+          const form = new FormData()
+          form.append('submission', submission.id)
+          form.append('document_type', docType)
+          form.append('file', file)
+          try {
+            await uploadDocument(form)
+          } catch {
+            failed++
+          }
+        })
+      )
+
+      toast.dismiss(uploadToast)
+      setIsUploading(false)
+
+      if (failed === 0) {
+        toast.success(`${fileEntries.length} dokumen berhasil diunggah`)
+      } else {
+        toast.error(`${failed} dokumen gagal diunggah — coba lagi dari Brankas Dokumen`)
+      }
+    }
+
+    qc.invalidateQueries({ queryKey: ['dashboard-stats'] })
+    qc.invalidateQueries({ queryKey: ['submissions'] })
+    qc.invalidateQueries({ queryKey: ['documents'] })
+    setResult(submission)
+    setStep(4)
   }
 
   if (step === 4 && result) {
     return <StepResult result={result} />
   }
+
+  const isBusy = mutation.isPending || isUploading
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -106,7 +147,7 @@ export default function SubmissionWizard() {
           data={formData}
           onSubmit={submit}
           onBack={prev}
-          isLoading={mutation.isPending}
+          isLoading={isBusy}
         />
       )}
     </div>
