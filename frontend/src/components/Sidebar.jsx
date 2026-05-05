@@ -7,7 +7,7 @@ const NAV_ITEMS = [
   { to: '/dashboard',      icon: Icons.dashboard,    label: 'Dashboard' },
   { to: '/submissions/new', icon: Icons.plus,        label: 'Ajukan Permohonan', roles: ['vendor'] },
   { to: '/approval-queue', icon: Icons.checkCircle,  label: 'Antrean Persetujuan', roles: ['company_tax_team'] },
-  { to: '/documents',      icon: Icons.folder,       label: 'Brankas Dokumen' },
+  { to: '/documents',      icon: Icons.folder,       label: 'Brankas Dokumen', roles: ['company_tax_team'] },
 ]
 
 export default function Sidebar() {

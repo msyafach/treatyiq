@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard'
 import ApprovalQueue from './pages/ApprovalQueue'
 import DocumentVault from './pages/DocumentVault'
 import SubmissionWizard from './pages/SubmissionWizard'
+import SubmissionDetail from './pages/SubmissionDetail'
 
 export default function App() {
   return (
@@ -25,7 +26,7 @@ export default function App() {
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="submissions/new" element={<SubmissionWizard />} />
-            <Route path="submissions/:id" element={<SubmissionWizard />} />
+            <Route path="submissions/:id" element={<SubmissionDetail />} />
             <Route path="approval-queue" element={<ApprovalQueue />} />
             <Route path="documents" element={<DocumentVault />} />
           </Route>

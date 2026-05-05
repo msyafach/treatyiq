@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { Navigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { createSubmission } from '../../api/submissions'
 import { uploadDocument } from '../../api/documents'
 import { Icons } from '../../components/icons'
 import CountryChip from '../../components/CountryChip'
 import { getTreatyRate, formatIDR, INCOME_LABELS } from '../../utils/treatyRates'
+import { useAuth } from '../../context/AuthContext'
 import Step1Vendor from './Step1Vendor'
 import Step2Income from './Step2Income'
 import Step3Compliance from './Step3Compliance'
@@ -20,6 +22,7 @@ const STEPS = [
 ]
 
 export default function SubmissionWizard() {
+  const { user } = useAuth()
   const [step, setStep] = useState(0)
   const [data, setData] = useState({})
   const [files, setFiles] = useState({})
@@ -46,7 +49,36 @@ export default function SubmissionWizard() {
     : null
   const savings = treatyInfo ? Math.max(0, amountNum * (20 - treatyInfo.rate) / 100) : 0
 
-  const handleNext = () => setStep((s) => Math.min(s + 1, STEPS.length - 1))
+  const validateStep = () => {
+    if (step === 0) {
+      if (!data.vendor_name?.trim()) { toast.error('Nama perusahaan vendor wajib diisi'); return false }
+      if (!data.foreign_tax_id?.trim()) { toast.error('Nomor pajak asing wajib diisi'); return false }
+      if (!data.country) { toast.error('Negara domisili pajak wajib dipilih'); return false }
+    }
+    if (step === 1) {
+      if (!data.income_type) { toast.error('Jenis penghasilan wajib dipilih'); return false }
+      const amt = parseFloat(String(data.amount_idr || '').replace(/[^\d]/g, ''))
+      if (!amt || amt <= 0) { toast.error('Jumlah penghasilan wajib diisi'); return false }
+    }
+    if (step === 2) {
+      if (data.is_beneficial_owner === undefined || data.is_beneficial_owner === null) {
+        toast.error('Pertanyaan Beneficial Owner wajib dijawab'); return false
+      }
+      if (data.passes_ppt === undefined || data.passes_ppt === null) {
+        toast.error('Pertanyaan Principal Purpose Test wajib dijawab'); return false
+      }
+      if (data.has_economic_substance === undefined || data.has_economic_substance === null) {
+        toast.error('Pertanyaan Substansi Ekonomi wajib dijawab'); return false
+      }
+      if (data.income_type === 'technical_services' &&
+          (data.has_permanent_establishment === undefined || data.has_permanent_establishment === null)) {
+        toast.error('Pertanyaan Bentuk Usaha Tetap wajib dijawab'); return false
+      }
+    }
+    return true
+  }
+
+  const handleNext = () => { if (validateStep()) setStep((s) => Math.min(s + 1, STEPS.length - 1)) }
   const handlePrev = () => setStep((s) => Math.max(s - 1, 0))
 
   const handleSubmit = async () => {
@@ -107,6 +139,8 @@ export default function SubmissionWizard() {
     qc.invalidateQueries({ queryKey: ['documents'] })
     setResult(submission)
   }
+
+  if (user?.role === 'company_tax_team') return <Navigate to="/approval-queue" replace />
 
   if (result) return <StepResult result={result} />
 

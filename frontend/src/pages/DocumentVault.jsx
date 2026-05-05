@@ -1,8 +1,10 @@
 import { useRef, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { Navigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { getDocuments, uploadDocument } from '../api/documents'
 import { getSubmissions } from '../api/submissions'
+import { useAuth } from '../context/AuthContext'
 import { Icons } from '../components/icons'
 import StatusBadge from '../components/StatusBadge'
 import Avatar from '../components/Avatar'
@@ -233,7 +235,10 @@ function UploadModal({ onClose, qc }) {
 }
 
 export default function DocumentVault() {
+  const { user } = useAuth()
   const qc = useQueryClient()
+
+  if (user?.role !== 'company_tax_team') return <Navigate to="/dashboard" replace />
   const [vendorFilter, setVendorFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [typeFilter, setTypeFilter] = useState('')

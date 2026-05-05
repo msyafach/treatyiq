@@ -194,6 +194,110 @@ function exportLaporan(stats, user) {
   win.document.close()
 }
 
+const STATUS_COUNTS = (submissions) => {
+  const c = { pending: 0, flagged: 0, approved: 0, rejected: 0 }
+  submissions.forEach((s) => { if (c[s.status] !== undefined) c[s.status]++ })
+  return c
+}
+
+function VendorDashboard({ user, isLoading, submissions, navigate }) {
+  const counts = STATUS_COUNTS(submissions)
+  const totalSavings = submissions
+    .filter((s) => s.status === 'approved')
+    .reduce((sum, s) => sum + (s.amount_idr * (20 - (s.treaty_rate_pct ?? 20)) / 100), 0)
+
+  return (
+    <div className="tiq-page">
+      <div className="tiq-page-head">
+        <div>
+          <div className="tiq-eyebrow">Halo, {user?.full_name?.split(' ')[0]}</div>
+          <h1 className="tiq-h1">Permohonan P3B saya</h1>
+          <p className="tiq-page-sub">{user?.company_name}</p>
+        </div>
+        <button className="tiq-btn tiq-btn-primary" onClick={() => navigate('/submissions/new')}>
+          {Icons.plus} Ajukan permohonan baru
+        </button>
+      </div>
+
+      <div className="tiq-stats-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 24 }}>
+        <Stat label="Total Permohonan" value={isLoading ? 0 : submissions.length} sub="semua status" color="#0095D6" icon={Icons.doc} />
+        <Stat label="Menunggu" value={isLoading ? 0 : counts.pending + counts.flagged} sub="perlu tinjauan tim pajak" color="#F59E0B" icon={Icons.clock} />
+        <Stat label="Disetujui" value={isLoading ? 0 : counts.approved} sub="tarif P3B diterapkan" color="#13A538" icon={Icons.checkCircle} />
+        <Stat label="Penghematan" value={isLoading ? '—' : formatIDR(totalSavings)} sub="vs tarif domestik 20%" color="#7C3AED" icon={Icons.sparkle} />
+      </div>
+
+      <section className="tiq-card">
+        <div className="tiq-card-head">
+          <div>
+            <h3 className="tiq-card-title">Daftar permohonan</h3>
+            <p className="tiq-card-sub">{submissions.length} permohonan diurutkan berdasarkan tanggal</p>
+          </div>
+        </div>
+
+        {isLoading ? (
+          <div className="tiq-loading"><div className="tiq-spinner" /></div>
+        ) : submissions.length === 0 ? (
+          <div className="tiq-empty" style={{ border: 'none', borderRadius: 0 }}>
+            <div className="tiq-empty-icon">{Icons.doc}</div>
+            <div className="tiq-empty-title">Belum ada permohonan</div>
+            <div className="tiq-empty-sub">Ajukan permohonan pertama untuk memulai.</div>
+            <button className="tiq-btn tiq-btn-primary" style={{ marginTop: 14 }} onClick={() => navigate('/submissions/new')}>
+              {Icons.plus} Ajukan Permohonan
+            </button>
+          </div>
+        ) : (
+          <div className="tiq-table-wrap">
+            <table className="tiq-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Vendor</th>
+                  <th>Negara</th>
+                  <th>Penghasilan</th>
+                  <th className="ta-right">Jumlah</th>
+                  <th className="ta-center">Tarif P3B</th>
+                  <th>Status</th>
+                  <th aria-label="Actions" />
+                </tr>
+              </thead>
+              <tbody>
+                {submissions.map((s) => (
+                  <tr
+                    key={s.id}
+                    className={s.risk_flagged ? 'is-flagged' : ''}
+                    style={{ cursor: 'pointer' }}
+                    onClick={() => navigate(`/submissions/${s.id}`)}
+                  >
+                    <td><code className="tiq-mono" style={{ fontSize: 12 }}>{s.id}</code></td>
+                    <td className="td-vendor">
+                      <Avatar name={s.vendor_name} size={28} />
+                      <span>{s.vendor_name}</span>
+                    </td>
+                    <td><CountryChip country={s.country} /></td>
+                    <td className="td-muted">{INCOME_LABELS[s.income_type] || s.income_type_display}</td>
+                    <td className="ta-right tiq-mono">{formatIDR(s.amount_idr)}</td>
+                    <td className="ta-center">
+                      <span className={`tiq-rate-pill ${s.treaty_rate_pct === 0 ? 'is-zero' : ''}`}>
+                        {s.treaty_rate_pct}%
+                      </span>
+                    </td>
+                    <td><StatusBadge status={s.status} /></td>
+                    <td className="ta-right">
+                      <button className="tiq-icon-btn-sm" aria-label="Detail" onClick={(e) => { e.stopPropagation(); navigate(`/submissions/${s.id}`) }}>
+                        {Icons.chevRight}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+    </div>
+  )
+}
+
 export default function Dashboard() {
   const { user } = useAuth()
   const navigate = useNavigate()
@@ -210,6 +314,10 @@ export default function Dashboard() {
   const pending = stats.pending_approvals ?? 0
   const approved = stats.approved_this_month ?? 0
   const vendors = stats.total_vendors ?? 0
+
+  if (user?.role === 'vendor') {
+    return <VendorDashboard user={user} isLoading={isLoading} submissions={submissions} navigate={navigate} />
+  }
 
   // Build country breakdown from recent submissions
   const byCountry = {}
