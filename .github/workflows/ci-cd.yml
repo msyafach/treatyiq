@@ -160,31 +160,44 @@ jobs:
 
       - name: Deploy
         env:
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+          ALLOWED_HOSTS: ${{ secrets.ALLOWED_HOSTS }}
+          DB_NAME: ${{ secrets.DB_NAME }}
+          DB_USER: ${{ secrets.DB_USER }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_STORAGE_BUCKET_NAME: ${{ secrets.AWS_STORAGE_BUCKET_NAME }}
-          GHCR_OWNER: ${{ secrets.GHCR_OWNER }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_ACTOR: ${{ github.actor }}
+          GHCR_OWNER: ${{ github.repository_owner }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_ACTOR: ${{ github.actor }}
         run: |
           set -e
 
-          # Append secrets ke .env — Docker Compose pakai nilai terakhir jika duplikat
+          # Tulis ulang .env dari secrets — buat jika belum ada
           ENV_FILE=$HOME/treatyiq/.env
           mkdir -p $HOME/treatyiq
-          touch $ENV_FILE
-          cat >> $ENV_FILE << EOF
+          cat > $ENV_FILE << EOF
+          SECRET_KEY=${SECRET_KEY}
+          DEBUG=False
+          ALLOWED_HOSTS=${ALLOWED_HOSTS}
+          DB_NAME=${DB_NAME}
+          DB_USER=${DB_USER}
+          DB_PASSWORD=${DB_PASSWORD}
+          DB_HOST=db
+          DB_PORT=5432
           USE_S3=True
           AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
           AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
           AWS_STORAGE_BUCKET_NAME=${AWS_STORAGE_BUCKET_NAME}
+          AWS_S3_REGION_NAME=ap-southeast-1
           GHCR_OWNER=${GHCR_OWNER}
           EOF
 
           # Copy .env ke workspace agar env_file: .env di compose bisa resolve
           cp $ENV_FILE .env
 
-          echo "${GITHUB_TOKEN}" | docker login ghcr.io -u "${GITHUB_ACTOR}" --password-stdin
+          echo "${GH_TOKEN}" | docker login ghcr.io -u "${GH_ACTOR}" --password-stdin
           docker compose -f docker-compose.prod.yml pull
           docker compose -f docker-compose.prod.yml up -d --remove-orphans
           docker compose -f docker-compose.prod.yml exec -T backend python manage.py migrate
