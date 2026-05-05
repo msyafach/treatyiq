@@ -135,18 +135,15 @@ export default function SubmissionDetail() {
 
   return (
     <div className="tiq-page">
-      <button className="tiq-btn tiq-btn-ghost" style={{ marginBottom: 16, alignSelf: 'flex-start' }} onClick={() => navigate(backTo)}>
-        {Icons.arrowLeft} Kembali
-      </button>
-
-      <div className="tiq-page-head" style={{ marginBottom: 24 }}>
-        <div>
-          <div className="tiq-eyebrow">Permohonan #{String(s.id).padStart(5, '0')}</div>
-          <h1 className="tiq-h1" style={{ marginBottom: 10 }}>{s.vendor_name}</h1>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <StatusBadge status={s.status} />
-            {s.risk_flagged && <span className="tiq-flag-pill">{Icons.alert} Tinjauan manual</span>}
-          </div>
+      <div style={{ marginBottom: 20 }}>
+        <button className="tiq-btn tiq-btn-ghost" style={{ marginBottom: 14 }} onClick={() => navigate(backTo)}>
+          {Icons.arrowLeft} Kembali
+        </button>
+        <div className="tiq-eyebrow">Permohonan #{String(s.id).padStart(5, '0')}</div>
+        <h1 className="tiq-h1" style={{ margin: '4px 0 10px' }}>{s.vendor_name}</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <StatusBadge status={s.status} />
+          {s.risk_flagged && <span className="tiq-flag-pill">{Icons.alert} Tinjauan manual</span>}
         </div>
       </div>
 
