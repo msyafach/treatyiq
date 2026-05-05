@@ -1,18 +1,17 @@
-import { AlertTriangle } from 'lucide-react'
-
-const CONFIG = {
-  pending: { label: 'Menunggu', className: 'bg-yellow-100 text-yellow-800' },
-  approved: { label: 'Disetujui', className: 'bg-green-100 text-green-800' },
-  rejected: { label: 'Ditolak', className: 'bg-red-100 text-red-800' },
-  flagged: { label: 'Ditandai', className: 'bg-red-100 text-red-800', icon: true },
+const STATUS_MAP = {
+  approved: { label: 'Disetujui', dot: '#13A538', bg: 'rgba(19,165,56,.10)',   fg: '#0E7C2A' },
+  pending:  { label: 'Menunggu',  dot: '#F59E0B', bg: 'rgba(245,158,11,.12)',  fg: '#9C5800' },
+  flagged:  { label: 'Ditandai',  dot: '#EF4444', bg: 'rgba(239,68,68,.10)',   fg: '#B91C1C' },
+  rejected: { label: 'Ditolak',   dot: '#6B7280', bg: 'rgba(107,114,128,.12)', fg: '#374151' },
+  draft:    { label: 'Draft',     dot: '#94A3B8', bg: 'rgba(148,163,184,.15)', fg: '#475569' },
 }
 
 export default function StatusBadge({ status }) {
-  const cfg = CONFIG[status] || { label: status, className: 'bg-gray-100 text-gray-800' }
+  const c = STATUS_MAP[status] || STATUS_MAP.pending
   return (
-    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${cfg.className}`}>
-      {cfg.icon && <AlertTriangle size={11} />}
-      {cfg.label}
+    <span className="tiq-badge" style={{ background: c.bg, color: c.fg }}>
+      <span className="tiq-badge-dot" style={{ background: c.dot }} />
+      {c.label}
     </span>
   )
 }

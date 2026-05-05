@@ -1,26 +1,131 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { AlertTriangle, Check, X } from 'lucide-react'
+import { Navigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { getSubmissions, approveSubmission, rejectSubmission } from '../api/submissions'
-import StatusBadge from '../components/StatusBadge'
-import { formatIDR, COUNTRY_FLAGS, INCOME_LABELS } from '../utils/treatyRates'
 import { useAuth } from '../context/AuthContext'
-import { Navigate } from 'react-router-dom'
+import { Icons } from '../components/icons'
+import StatusBadge from '../components/StatusBadge'
+import CountryChip from '../components/CountryChip'
+import Avatar from '../components/Avatar'
+import { formatIDR, INCOME_LABELS } from '../utils/treatyRates'
 
 const TABS = [
-  { label: 'Semua', value: '' },
-  { label: 'Menunggu', value: 'pending' },
-  { label: 'Ditandai', value: 'flagged' },
-  { label: 'Disetujui', value: 'approved' },
-  { label: 'Ditolak', value: 'rejected' },
+  { key: 'all',      label: 'Semua' },
+  { key: 'pending',  label: 'Menunggu',  dot: '#F59E0B' },
+  { key: 'flagged',  label: 'Ditandai',  dot: '#EF4444' },
+  { key: 'approved', label: 'Disetujui', dot: '#13A538' },
+  { key: 'rejected', label: 'Ditolak',   dot: '#94A3B8' },
 ]
+
+function ApprovalCard({ s, onReject, onApprove }) {
+  const savings = s.amount_idr * (20 - (s.treaty_rate_pct ?? 20)) / 100
+
+  return (
+    <article className={`tiq-app-card ${s.risk_flagged ? 'is-flagged' : ''}`}>
+      <div className="tiq-app-card-main">
+        <div className="tiq-app-row">
+          <div className="tiq-app-vendor-block">
+            <Avatar name={s.vendor_name} size={42} />
+            <div>
+              <div className="tiq-app-vendor">{s.vendor_name}</div>
+              <div className="tiq-app-meta">
+                <code className="tiq-mono">{s.id}</code>
+                <span className="tiq-meta-sep">·</span>
+                <CountryChip country={s.country} />
+                <span className="tiq-meta-sep">·</span>
+                <span>{s.submitted_at ? new Date(s.submitted_at).toLocaleDateString('id-ID', { day:'numeric', month:'short', year:'numeric' }) : '—'}</span>
+              </div>
+            </div>
+          </div>
+          <div className="tiq-app-status">
+            <StatusBadge status={s.status} />
+            {s.risk_flagged && (
+              <span className="tiq-flag-pill">
+                {Icons.alert} Tinjauan manual
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="tiq-app-grid">
+          <div>
+            <div className="tiq-cell-label">Jenis penghasilan</div>
+            <div className="tiq-cell-value">{INCOME_LABELS[s.income_type] || s.income_type_display}</div>
+          </div>
+          <div>
+            <div className="tiq-cell-label">Jumlah</div>
+            <div className="tiq-cell-value tiq-mono">{formatIDR(s.amount_idr)}</div>
+          </div>
+          <div>
+            <div className="tiq-cell-label">Tarif domestik → P3B</div>
+            <div className="tiq-cell-value">
+              <span className="tiq-rate-strike">20%</span>
+              <span className="tiq-rate-arrow">→</span>
+              <span className={`tiq-rate-pill ${s.treaty_rate_pct === 0 ? 'is-zero' : ''}`}>{s.treaty_rate_pct}%</span>
+            </div>
+          </div>
+          <div>
+            <div className="tiq-cell-label">Penghematan</div>
+            <div className="tiq-cell-value tiq-mono" style={{ color: 'var(--success)' }}>
+              {formatIDR(savings)}
+            </div>
+          </div>
+          <div className="tiq-app-cell-wide">
+            <div className="tiq-cell-label">Dasar hukum</div>
+            <div className="tiq-cell-value tiq-cell-basis">
+              {Icons.scales} {s.legal_basis}
+            </div>
+          </div>
+        </div>
+
+        {s.risk_flags?.length > 0 && (
+          <div className="tiq-app-flags">
+            <div className="tiq-flag-banner-icon">{Icons.alert}</div>
+            <div>
+              <div className="tiq-flag-banner-title">
+                Sistem mendeteksi {s.risk_flags.length} risiko PPT
+              </div>
+              <ul className="tiq-flag-banner-list">
+                {s.risk_flags.map((f, i) => <li key={i}>{f}</li>)}
+              </ul>
+            </div>
+          </div>
+        )}
+
+        {s.rejection_reason && (
+          <div className="tiq-app-reject">
+            <strong>Alasan penolakan:</strong> {s.rejection_reason}
+          </div>
+        )}
+      </div>
+
+      {(s.status === 'pending' || s.status === 'flagged') && (
+        <div className="tiq-app-actions">
+          <button className="tiq-btn tiq-btn-danger-ghost tiq-btn-sm" onClick={() => onReject(s)}>
+            {Icons.x} Tolak
+          </button>
+          <button className="tiq-btn tiq-btn-success tiq-btn-sm" onClick={() => onApprove(s.id)}>
+            {Icons.check} Setujui
+          </button>
+        </div>
+      )}
+
+      {s.status === 'approved' && s.reviewed_by_name && (
+        <div className="tiq-app-approved-meta">
+          <span style={{ color: 'var(--success)' }}>{Icons.checkCircle}</span>
+          Disetujui oleh <strong style={{ marginLeft: 4 }}>{s.reviewed_by_name}</strong>
+        </div>
+      )}
+    </article>
+  )
+}
 
 export default function ApprovalQueue() {
   const { user } = useAuth()
   const qc = useQueryClient()
-  const [activeTab, setActiveTab] = useState('')
-  const [rejectModal, setRejectModal] = useState(null)
+  const [tab, setTab] = useState('all')
+  const [rejectTarget, setRejectTarget] = useState(null)
   const [rejectReason, setRejectReason] = useState('')
 
   if (user?.role !== 'company_tax_team') {
@@ -28,11 +133,11 @@ export default function ApprovalQueue() {
   }
 
   const { data, isLoading } = useQuery({
-    queryKey: ['submissions', activeTab],
-    queryFn: () => getSubmissions(activeTab ? { status: activeTab } : {}).then(r => r.data),
+    queryKey: ['submissions', tab],
+    queryFn: () => getSubmissions(tab !== 'all' ? { status: tab } : {}).then((r) => r.data),
   })
 
-  const approveMutation = useMutation({
+  const approveMut = useMutation({
     mutationFn: (id) => approveSubmission(id),
     onSuccess: () => {
       toast.success('Permohonan disetujui')
@@ -42,11 +147,11 @@ export default function ApprovalQueue() {
     onError: () => toast.error('Gagal menyetujui permohonan'),
   })
 
-  const rejectMutation = useMutation({
+  const rejectMut = useMutation({
     mutationFn: ({ id, reason }) => rejectSubmission(id, reason),
     onSuccess: () => {
       toast.success('Permohonan ditolak')
-      setRejectModal(null)
+      setRejectTarget(null)
       setRejectReason('')
       qc.invalidateQueries({ queryKey: ['submissions'] })
       qc.invalidateQueries({ queryKey: ['dashboard-stats'] })
@@ -56,136 +161,84 @@ export default function ApprovalQueue() {
 
   const submissions = data?.results || data || []
 
+  // Count per status for tab badges
+  const counts = {}
+  submissions.forEach((s) => { counts[s.status] = (counts[s.status] || 0) + 1 })
+  counts.all = submissions.length
+
   return (
-    <div>
-      <div className="mb-6">
-        <h1 className="text-xl font-bold text-gray-900">Antrean Persetujuan</h1>
-        <p className="text-sm text-muted mt-0.5">Tinjau dan setujui permohonan penerapan tarif P3B</p>
+    <div className="tiq-page">
+      <div className="tiq-page-head">
+        <div>
+          <h1 className="tiq-h1">Antrean persetujuan</h1>
+          <p className="tiq-page-sub">Tinjau, setujui, atau tolak permohonan tarif P3B</p>
+        </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex gap-1 mb-4 bg-gray-100 p-1 rounded-lg w-fit">
-        {TABS.map(tab => (
+      <div className="tiq-tabs-bar">
+        {TABS.map((t) => (
           <button
-            key={tab.value}
-            onClick={() => setActiveTab(tab.value)}
-            className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
-              activeTab === tab.value
-                ? 'bg-white text-gray-900 shadow-sm'
-                : 'text-muted hover:text-gray-700'
-            }`}
+            key={t.key}
+            className={`tiq-tab ${tab === t.key ? 'is-active' : ''}`}
+            onClick={() => setTab(t.key)}
           >
-            {tab.label}
+            {t.dot && <span className="tiq-tab-dot" style={{ background: t.dot }} />}
+            {t.label}
+            <span className="tiq-tab-count">{counts[t.key] || 0}</span>
           </button>
         ))}
       </div>
 
       {isLoading ? (
-        <div className="flex justify-center py-16">
-          <div className="animate-spin rounded-full h-8 w-8 border-4 border-primary border-t-transparent" />
-        </div>
+        <div className="tiq-loading"><div className="tiq-spinner" /></div>
       ) : submissions.length === 0 ? (
-        <div className="card p-12 text-center text-muted">
-          <p>Tidak ada permohonan ditemukan.</p>
+        <div className="tiq-empty">
+          <div className="tiq-empty-icon">{Icons.checkCircle}</div>
+          <div className="tiq-empty-title">Antrean kosong</div>
+          <div className="tiq-empty-sub">Tidak ada permohonan dalam status ini.</div>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="tiq-queue-list">
           {submissions.map((s) => (
-            <div
+            <ApprovalCard
               key={s.id}
-              className={`card p-5 ${s.risk_flagged ? 'border-red-200 bg-red-50/30' : ''}`}
-            >
-              <div className="flex flex-wrap items-start justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="font-semibold text-gray-900">{s.vendor_name}</h3>
-                    <span className="text-muted text-sm">•</span>
-                    <span className="text-sm text-gray-600">
-                      {COUNTRY_FLAGS[s.country]} {s.country_display}
-                    </span>
-                    <StatusBadge status={s.status} />
-                    {s.risk_flagged && (
-                      <span className="inline-flex items-center gap-1 text-xs text-red-700 bg-red-100 px-2 py-0.5 rounded-full">
-                        <AlertTriangle size={11} /> Perlu Tinjauan Manual
-                      </span>
-                    )}
-                  </div>
-                  <div className="mt-2 flex flex-wrap gap-4 text-sm text-gray-600">
-                    <span>{INCOME_LABELS[s.income_type] || s.income_type_display}</span>
-                    <span className="font-mono">{formatIDR(s.amount_idr)}</span>
-                    <span>
-                      Tarif P3B: <strong className="text-primary">{s.treaty_rate_pct}%</strong>
-                    </span>
-                    <span className="text-muted">{s.legal_basis}</span>
-                  </div>
-                  {s.risk_flags?.length > 0 && (
-                    <div className="mt-2 flex flex-wrap gap-1.5">
-                      {s.risk_flags.map((flag, i) => (
-                        <span key={i} className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full">
-                          {flag}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  {s.rejection_reason && (
-                    <p className="mt-2 text-xs text-red-600">
-                      Alasan penolakan: {s.rejection_reason}
-                    </p>
-                  )}
-                </div>
-
-                {(s.status === 'pending' || s.status === 'flagged') && (
-                  <div className="flex gap-2 flex-shrink-0">
-                    <button
-                      onClick={() => approveMutation.mutate(s.id)}
-                      disabled={approveMutation.isPending}
-                      className="btn-success flex items-center gap-1.5 text-sm py-1.5"
-                    >
-                      <Check size={15} /> Setujui
-                    </button>
-                    <button
-                      onClick={() => setRejectModal(s)}
-                      className="btn-danger flex items-center gap-1.5 text-sm py-1.5"
-                    >
-                      <X size={15} /> Tolak
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
+              s={s}
+              onReject={setRejectTarget}
+              onApprove={(id) => approveMut.mutate(id)}
+            />
           ))}
         </div>
       )}
 
-      {/* Reject Modal */}
-      {rejectModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl">
-            <h3 className="font-semibold text-gray-900 mb-1">Tolak Permohonan</h3>
-            <p className="text-sm text-muted mb-4">
-              Permohonan dari <strong>{rejectModal.vendor_name}</strong> akan ditolak.
-              Tarif domestik 20% akan diterapkan.
-            </p>
-            <label className="label">Alasan Penolakan</label>
+      {/* Reject modal */}
+      {rejectTarget && (
+        <div className="tiq-modal-backdrop" onClick={() => setRejectTarget(null)}>
+          <div className="tiq-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="tiq-modal-head">
+              <div>
+                <h3>Tolak permohonan?</h3>
+                <p>Tarif domestik 20% akan diterapkan untuk {rejectTarget.vendor_name}.</p>
+              </div>
+              <button className="tiq-icon-btn" onClick={() => setRejectTarget(null)} aria-label="Tutup">
+                {Icons.x}
+              </button>
+            </div>
+            <label className="tiq-label">Alasan penolakan <span className="tiq-req">*</span></label>
             <textarea
-              className="input-field min-h-[80px] resize-none"
-              placeholder="Jelaskan alasan penolakan..."
+              className="tiq-input tiq-textarea"
+              rows={4}
+              placeholder="Jelaskan alasan penolakan agar vendor bisa memperbaiki…"
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
             />
-            <div className="flex gap-2 mt-4 justify-end">
+            <div className="tiq-modal-foot">
+              <button className="tiq-btn tiq-btn-ghost" onClick={() => setRejectTarget(null)}>Batal</button>
               <button
-                onClick={() => { setRejectModal(null); setRejectReason('') }}
-                className="btn-secondary"
+                className="tiq-btn tiq-btn-danger"
+                disabled={rejectMut.isPending || !rejectReason.trim()}
+                onClick={() => rejectMut.mutate({ id: rejectTarget.id, reason: rejectReason })}
               >
-                Batal
-              </button>
-              <button
-                onClick={() => rejectMutation.mutate({ id: rejectModal.id, reason: rejectReason })}
-                disabled={rejectMutation.isPending || !rejectReason.trim()}
-                className="btn-danger"
-              >
-                {rejectMutation.isPending ? 'Memproses...' : 'Konfirmasi Tolak'}
+                {rejectMut.isPending ? 'Memproses…' : 'Konfirmasi tolak'}
               </button>
             </div>
           </div>

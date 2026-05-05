@@ -1,3 +1,4 @@
+from django.conf import settings
 from rest_framework import serializers
 from .models import Document
 
@@ -24,14 +25,21 @@ class DocumentSerializer(serializers.ModelSerializer):
         read_only_fields = ('id', 'filename', 'file_size', 'uploaded_by', 'created_at')
 
     def get_file_url(self, obj):
+        if not obj.file:
+            return None
+        if getattr(settings, 'USE_S3', False):
+            # django-storages S3Boto3Storage menghasilkan presigned URL
+            # saat AWS_QUERYSTRING_AUTH=True (default)
+            return obj.file.url
         request = self.context.get('request')
-        if obj.file and request:
+        if request:
             return request.build_absolute_uri(obj.file.url)
-        return None
+        return obj.file.url
 
     def create(self, validated_data):
         file = validated_data.get('file')
         validated_data['filename'] = file.name if file else ''
         validated_data['file_size'] = file.size if file else 0
+        # uploaded_by harus di-set sebelum save agar upload_to callable bisa membaca company_name
         validated_data['uploaded_by'] = self.context['request'].user
         return super().create(validated_data)

@@ -1,9 +1,11 @@
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { CheckCircle } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { createSubmission } from '../../api/submissions'
 import { uploadDocument } from '../../api/documents'
+import { Icons } from '../../components/icons'
+import CountryChip from '../../components/CountryChip'
+import { getTreatyRate, formatIDR, INCOME_LABELS } from '../../utils/treatyRates'
 import Step1Vendor from './Step1Vendor'
 import Step2Income from './Step2Income'
 import Step3Compliance from './Step3Compliance'
@@ -11,47 +13,62 @@ import Step4Documents from './Step4Documents'
 import StepResult from './StepResult'
 
 const STEPS = [
-  'Identitas Vendor',
-  'Jenis Penghasilan',
-  'Kepatuhan PMK 112',
-  'Upload Dokumen',
+  { key: 'vendor',  label: 'Identitas Vendor',   icon: Icons.briefcase },
+  { key: 'income',  label: 'Jenis Penghasilan',  icon: Icons.receipt },
+  { key: 'comply',  label: 'Kepatuhan PMK 112',  icon: Icons.shield },
+  { key: 'docs',    label: 'Upload Dokumen',      icon: Icons.upload },
 ]
 
 export default function SubmissionWizard() {
   const [step, setStep] = useState(0)
-  const [formData, setFormData] = useState({})
+  const [data, setData] = useState({})
+  const [files, setFiles] = useState({})
   const [result, setResult] = useState(null)
   const [isUploading, setIsUploading] = useState(false)
   const qc = useQueryClient()
 
   const mutation = useMutation({
-    mutationFn: (data) => createSubmission(data),
+    mutationFn: (payload) => createSubmission(payload),
     onError: (err) => {
       const detail = err.response?.data
-      if (typeof detail === 'object') {
-        const msg = Object.values(detail).flat().join(' ')
-        toast.error(msg || 'Gagal mengajukan permohonan')
-      } else {
-        toast.error('Gagal mengajukan permohonan')
-      }
+      const msg = typeof detail === 'object'
+        ? Object.values(detail).flat().join(' ')
+        : 'Gagal mengajukan permohonan'
+      toast.error(msg)
     },
   })
 
-  const updateData = (newData) => setFormData((prev) => ({ ...prev, ...newData }))
+  const update = (patch) => setData((d) => ({ ...d, ...patch }))
 
-  const next = (data) => {
-    updateData(data)
-    setStep((s) => s + 1)
-  }
+  const amountNum = parseFloat(String(data.amount_idr || '').replace(/[^\d]/g, '')) || 0
+  const treatyInfo = (data.country && data.income_type)
+    ? getTreatyRate(data.country, data.income_type)
+    : null
+  const savings = treatyInfo ? Math.max(0, amountNum * (20 - treatyInfo.rate) / 100) : 0
 
-  const prev = () => setStep((s) => s - 1)
+  const handleNext = () => setStep((s) => Math.min(s + 1, STEPS.length - 1))
+  const handlePrev = () => setStep((s) => Math.max(s - 1, 0))
 
-  // files: { docType: File }
-  const submit = async (files) => {
-    const payload = { ...formData }
+  const handleSubmit = async () => {
+    const missing = Step4Documents.validate(data, files)
+    if (missing.length > 0) {
+      toast.error(`Dokumen wajib belum diunggah: ${missing.join(', ')}`)
+      return
+    }
+
     let submission
     try {
-      const res = await mutation.mutateAsync(payload)
+      const res = await mutation.mutateAsync({
+        vendor_name: data.vendor_name,
+        foreign_tax_id: data.foreign_tax_id,
+        country: data.country,
+        income_type: data.income_type,
+        amount_idr: data.amount_idr,
+        is_beneficial_owner: true,
+        passes_ppt: data.ppt_passed !== false,
+        has_economic_substance: !!data.has_cor,
+        has_permanent_establishment: false,
+      })
       submission = res.data
     } catch {
       return
@@ -69,11 +86,7 @@ export default function SubmissionWizard() {
           form.append('submission', submission.id)
           form.append('document_type', docType)
           form.append('file', file)
-          try {
-            await uploadDocument(form)
-          } catch {
-            failed++
-          }
+          try { await uploadDocument(form) } catch { failed++ }
         })
       )
 
@@ -91,65 +104,151 @@ export default function SubmissionWizard() {
     qc.invalidateQueries({ queryKey: ['submissions'] })
     qc.invalidateQueries({ queryKey: ['documents'] })
     setResult(submission)
-    setStep(4)
   }
 
-  if (step === 4 && result) {
-    return <StepResult result={result} />
-  }
+  if (result) return <StepResult result={result} />
 
   const isBusy = mutation.isPending || isUploading
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-xl font-bold text-gray-900">Ajukan Permohonan P3B</h1>
-        <p className="text-sm text-muted mt-0.5">Lengkapi formulir sesuai PMK 112/2025</p>
-      </div>
-
-      {/* Progress */}
-      <div className="card p-5 mb-6">
-        <div className="flex items-center">
-          {STEPS.map((label, i) => (
-            <div key={i} className="flex items-center flex-1 last:flex-none">
-              <div className="flex flex-col items-center">
-                <div
-                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-colors ${
-                    i < step
-                      ? 'bg-success text-white'
-                      : i === step
-                      ? 'bg-primary text-white'
-                      : 'bg-gray-100 text-muted'
-                  }`}
-                >
-                  {i < step ? <CheckCircle size={16} /> : i + 1}
-                </div>
-                <span className={`text-[11px] mt-1 text-center max-w-[70px] leading-tight ${
-                  i === step ? 'text-primary font-medium' : 'text-muted'
-                }`}>
-                  {label}
-                </span>
-              </div>
-              {i < STEPS.length - 1 && (
-                <div className={`flex-1 h-0.5 mx-2 mb-4 ${i < step ? 'bg-success' : 'bg-gray-200'}`} />
-              )}
-            </div>
-          ))}
+    <div className="tiq-page tiq-wizard">
+      <div className="tiq-page-head">
+        <div>
+          <h1 className="tiq-h1">Ajukan permohonan tarif P3B</h1>
+          <p className="tiq-page-sub">Lengkapi 4 langkah · sesuai PMK 112/2025</p>
         </div>
       </div>
 
-      {/* Step content */}
-      {step === 0 && <Step1Vendor data={formData} onNext={next} />}
-      {step === 1 && <Step2Income data={formData} onNext={next} onBack={prev} />}
-      {step === 2 && <Step3Compliance data={formData} onNext={next} onBack={prev} />}
-      {step === 3 && (
-        <Step4Documents
-          data={formData}
-          onSubmit={submit}
-          onBack={prev}
-          isLoading={isBusy}
-        />
-      )}
+      {/* Progress rail */}
+      <div className="tiq-stepper">
+        {STEPS.map((s, i) => {
+          const state = i < step ? 'done' : i === step ? 'active' : 'pending'
+          return (
+            <div key={s.key} className={`tiq-step is-${state}`}>
+              <div className="tiq-step-marker">
+                {state === 'done' ? Icons.check : <span>{i + 1}</span>}
+              </div>
+              <div className="tiq-step-label">
+                <div className="tiq-step-num">Langkah {i + 1}</div>
+                <div className="tiq-step-name">{s.label}</div>
+              </div>
+              {i < STEPS.length - 1 && <div className="tiq-step-line" />}
+            </div>
+          )
+        })}
+      </div>
+
+      <div className="tiq-wizard-body">
+        {/* Main form area */}
+        <div className="tiq-wizard-main">
+          {step === 0 && <Step1Vendor data={data} update={update} />}
+          {step === 1 && <Step2Income data={data} update={update} />}
+          {step === 2 && <Step3Compliance data={data} update={update} />}
+          {step === 3 && (
+            <Step4Documents data={data} files={files} onFilesChange={setFiles} />
+          )}
+
+          <div className="tiq-wizard-nav">
+            <button
+              className="tiq-btn tiq-btn-ghost"
+              onClick={handlePrev}
+              disabled={step === 0}
+            >
+              {Icons.arrowLeft} Kembali
+            </button>
+            {step < STEPS.length - 1 ? (
+              <button className="tiq-btn tiq-btn-primary" onClick={handleNext}>
+                Lanjut {Icons.arrowRight}
+              </button>
+            ) : (
+              <button
+                className="tiq-btn tiq-btn-success"
+                onClick={handleSubmit}
+                disabled={isBusy}
+              >
+                {isBusy ? 'Mengajukan…' : <>{Icons.check} Ajukan permohonan</>}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Aside: live treaty estimate */}
+        <aside className="tiq-wizard-aside">
+          <div className="tiq-aside-card">
+            <div className="tiq-aside-eyebrow">Estimasi langsung</div>
+
+            {!data.country ? (
+              <div className="tiq-aside-empty">
+                <div className="tiq-aside-empty-icon">{Icons.sparkle}</div>
+                <p>Pilih negara dan jenis penghasilan untuk melihat tarif treaty serta estimasi penghematan pajak.</p>
+              </div>
+            ) : (
+              <>
+                <div className="tiq-aside-vendor">
+                  <CountryChip country={data.country} />
+                  {data.income_type && (
+                    <span className="tiq-aside-income">
+                      {INCOME_LABELS[data.income_type]}
+                    </span>
+                  )}
+                </div>
+
+                {treatyInfo && (
+                  <>
+                    <div className="tiq-aside-rates">
+                      <div className="tiq-aside-rate">
+                        <div className="tiq-aside-rate-label">Tarif domestik</div>
+                        <div className="tiq-aside-rate-value tiq-strike">20%</div>
+                      </div>
+                      <div className="tiq-aside-rate-arrow">→</div>
+                      <div className="tiq-aside-rate is-treaty">
+                        <div className="tiq-aside-rate-label">Tarif treaty</div>
+                        <div className="tiq-aside-rate-value">{treatyInfo.rate}%</div>
+                      </div>
+                    </div>
+
+                    {amountNum > 0 && (
+                      <>
+                        <div className="tiq-aside-row">
+                          <span>Pajak terutang</span>
+                          <span className="tiq-mono">{formatIDR(amountNum * treatyInfo.rate / 100)}</span>
+                        </div>
+                        <div className="tiq-aside-row tiq-aside-savings">
+                          <span>Anda hemat</span>
+                          <span className="tiq-mono">{formatIDR(savings)}</span>
+                        </div>
+                      </>
+                    )}
+
+                    <div className="tiq-aside-basis">
+                      <span>{Icons.scales}</span>
+                      <span>{treatyInfo.basis}</span>
+                    </div>
+                  </>
+                )}
+
+                {!treatyInfo && data.income_type && (
+                  <div className="tiq-aside-empty" style={{ marginTop: 12 }}>
+                    <p>Tarif untuk kombinasi ini belum tersedia.</p>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+
+          <div className="tiq-aside-help">
+            <div className="tiq-aside-help-title">{Icons.shield} Dokumen yang diperlukan</div>
+            <ul>
+              <li>Certificate of Residence (COR) berlaku 12 bulan</li>
+              <li>Form DGT-1 ditandatangani vendor</li>
+              <li>Service agreement / kontrak</li>
+              {data.income_type?.startsWith('dividends') && (
+                <li>Bukti kepemilikan saham 365+ hari</li>
+              )}
+            </ul>
+          </div>
+        </aside>
+      </div>
     </div>
   )
 }

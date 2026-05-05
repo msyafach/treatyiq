@@ -85,8 +85,23 @@ STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+USE_S3 = config('USE_S3', default=False, cast=bool)
+
+if USE_S3:
+    AWS_ACCESS_KEY_ID     = config('AWS_ACCESS_KEY_ID')
+    AWS_SECRET_ACCESS_KEY = config('AWS_SECRET_ACCESS_KEY')
+    AWS_STORAGE_BUCKET_NAME = config('AWS_STORAGE_BUCKET_NAME')
+    AWS_S3_REGION_NAME    = config('AWS_S3_REGION_NAME', default='ap-southeast-1')
+    AWS_DEFAULT_ACL       = 'private'           # bucket tetap private
+    AWS_S3_FILE_OVERWRITE = False               # jangan timpa file sama nama
+    AWS_QUERYSTRING_AUTH  = True                # akses via presigned URL
+    AWS_QUERYSTRING_EXPIRE = 3600               # presigned URL berlaku 1 jam
+    AWS_S3_OBJECT_PARAMETERS = {'ContentDisposition': 'inline'}
+    DEFAULT_FILE_STORAGE  = 'storages.backends.s3boto3.S3Boto3Storage'
+    MEDIA_URL = f'https://{AWS_STORAGE_BUCKET_NAME}.s3.{AWS_S3_REGION_NAME}.amazonaws.com/'
+else:
+    MEDIA_URL  = '/media/'
+    MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 

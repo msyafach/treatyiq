@@ -8,3 +8,5 @@ gunicorn==22.0.0
 python-decouple==3.8
 whitenoise==6.7.0
 django-filter==24.3
+boto3==1.35.99
+django-storages[s3]==1.14.4
