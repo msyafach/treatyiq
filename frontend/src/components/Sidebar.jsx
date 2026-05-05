@@ -8,6 +8,7 @@ const NAV_ITEMS = [
   { to: '/submissions/new', icon: Icons.plus,        label: 'Ajukan Permohonan', roles: ['vendor'] },
   { to: '/approval-queue', icon: Icons.checkCircle,  label: 'Antrean Persetujuan', roles: ['company_tax_team'] },
   { to: '/documents',      icon: Icons.folder,       label: 'Brankas Dokumen', roles: ['company_tax_team'] },
+  { to: '/treaty-rates',   icon: Icons.scales,       label: 'Tarif P3B' },
 ]
 
 export default function Sidebar() {

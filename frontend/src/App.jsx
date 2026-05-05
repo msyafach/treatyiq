@@ -8,6 +8,7 @@ import ApprovalQueue from './pages/ApprovalQueue'
 import DocumentVault from './pages/DocumentVault'
 import SubmissionWizard from './pages/SubmissionWizard'
 import SubmissionDetail from './pages/SubmissionDetail'
+import TreatyRates from './pages/TreatyRates'
 
 export default function App() {
   return (
@@ -29,6 +30,7 @@ export default function App() {
             <Route path="submissions/:id" element={<SubmissionDetail />} />
             <Route path="approval-queue" element={<ApprovalQueue />} />
             <Route path="documents" element={<DocumentVault />} />
+            <Route path="treaty-rates" element={<TreatyRates />} />
           </Route>
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
