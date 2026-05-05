@@ -10,8 +10,8 @@ export default function Layout() {
     <div className="tiq-app">
       {/* 4px tri-color brand stripe at top of content */}
       <div className="tiq-brand-bar">
-        <span style={{ background: 'rgba(255,255,255,.0)' }} />
-        <span style={{ background: '#55B249' }} />
+        <span style={{ background: '#757574' }} />
+        <span style={{ background: '#13A538' }} />
         <span style={{ background: '#0095D6' }} />
       </div>
 

@@ -36,7 +36,7 @@ export default function Login() {
             <img
               src="/rsm-logo.svg"
               alt="RSM"
-              style={{ height: 24, filter: 'brightness(10)' }}
+              style={{ height: 48 }}
             />
           </div>
           <div className="tiq-login-eyebrow">Portal Kepatuhan PMK 112/2025</div>
@@ -63,12 +63,6 @@ export default function Login() {
             ))}
           </div>
 
-          <div className="tiq-login-demo">
-            <div className="tiq-login-demo-title">Demo accounts</div>
-            <div className="tiq-login-demo-row"><b>Tim Pajak</b> pajak@bni.co.id</div>
-            <div className="tiq-login-demo-row"><b>Vendor</b> tax@rsm.sg</div>
-            <div className="tiq-login-demo-pw">Kata sandi: TreatyIQ@2026</div>
-          </div>
         </div>
       </div>
 

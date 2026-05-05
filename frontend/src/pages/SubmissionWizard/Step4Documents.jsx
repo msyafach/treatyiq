@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import toast from 'react-hot-toast'
 import { Icons } from '../../components/icons'
 
 const ALL_DOCS = [
@@ -10,7 +11,7 @@ const ALL_DOCS = [
 ]
 
 function getDocList(data) {
-  const hasPptRisk = !data.has_economic_substance || data.ppt_passed === false
+  const hasPptRisk = !data.has_economic_substance || data.passes_ppt === false
   return ALL_DOCS.filter((doc) => {
     if (!doc.always) {
       if (doc.for && !doc.for.includes(data.income_type)) return false
@@ -36,9 +37,16 @@ export default function Step4Documents({ data, files, onFilesChange }) {
     onFilesChange({ ...files, [id]: file || undefined })
   }
 
+  const MAX_SIZE = 10 * 1024 * 1024
   const handleChange = (id, e) => {
     const file = e.target.files[0]
-    if (file) setFile(id, file)
+    if (!file) return
+    if (file.size > MAX_SIZE) {
+      toast.error(`${file.name} melebihi batas ukuran 10 MB`)
+      e.target.value = ''
+      return
+    }
+    setFile(id, file)
   }
 
   const remove = (id) => {

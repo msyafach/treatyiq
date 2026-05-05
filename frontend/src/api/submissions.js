@@ -15,5 +15,8 @@ export const approveSubmission = (id) =>
 export const rejectSubmission = (id, rejection_reason) =>
   api.post(`/submissions/${id}/reject/`, { rejection_reason })
 
+export const revokeSubmission = (id) =>
+  api.post(`/submissions/${id}/revoke/`)
+
 export const getDashboardStats = () =>
   api.get('/dashboard/stats/')

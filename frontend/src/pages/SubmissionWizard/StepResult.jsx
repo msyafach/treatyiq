@@ -1,27 +1,37 @@
 import { useNavigate } from 'react-router-dom'
 import { Icons } from '../../components/icons'
+import { useAuth } from '../../context/AuthContext'
 import StatusBadge from '../../components/StatusBadge'
 import CountryChip from '../../components/CountryChip'
 import { formatIDR, INCOME_LABELS } from '../../utils/treatyRates'
 
 export default function StepResult({ result }) {
-  const navigate = useNavigate()
+  const navigate  = useNavigate()
+  const { user }  = useAuth()
   const treatyPct = parseFloat(result.treaty_rate_pct ?? result.treaty_rate * 100)
-  const savings = parseFloat(result.tax_savings_idr) || 0
-  const id = result.id ? `TIQ-${String(result.id).padStart(6, '0')}` : result.id
+  const savings   = parseFloat(result.tax_savings_idr) || 0
+  const amount    = parseFloat(result.amount_idr) || 0
+  const id        = result.id ? `TIQ-${String(result.id).padStart(6, '0')}` : result.id
 
   return (
     <div className="tiq-page tiq-wizard-success">
       <div className="tiq-success-card">
-        <div className="tiq-success-icon">{Icons.checkCircle}</div>
-        <h1>Permohonan terkirim ke tim pajak</h1>
-        <p>
-          ID Permohonan <code className="tiq-mono">{id}</code> · status:{' '}
-          <StatusBadge status={result.status || 'pending'} />
-        </p>
 
+        {/* ── Header ───────────────────────────────────────── */}
+        <div className="tiq-success-header">
+          <div className="tiq-success-icon">{Icons.checkCircle}</div>
+          <div>
+            <h1>Permohonan terkirim ke tim pajak</h1>
+            <p className="tiq-success-meta">
+              <code className="tiq-mono">{id}</code>
+              <StatusBadge status={result.status || 'pending'} />
+            </p>
+          </div>
+        </div>
+
+        {/* ── Risk banner ───────────────────────────────────── */}
         {result.risk_flagged && (
-          <div className="tiq-app-flags" style={{ marginTop: 16, textAlign: 'left' }}>
+          <div className="tiq-app-flags">
             <div className="tiq-flag-banner-icon">{Icons.alert}</div>
             <div>
               <div className="tiq-flag-banner-title">
@@ -36,59 +46,97 @@ export default function StepResult({ result }) {
           </div>
         )}
 
-        <div className="tiq-success-stats">
-          <div>
-            <div className="tiq-cell-label">Negara</div>
-            <div className="tiq-success-val">
+        {/* ── Submission summary ────────────────────────────── */}
+        <div className="tiq-result-summary">
+          <div className="tiq-result-row">
+            <span className="tiq-result-label">Vendor</span>
+            <span className="tiq-result-value tiq-result-vendor">
               <CountryChip country={result.country} />
-            </div>
+              {result.vendor_name}
+            </span>
           </div>
-          <div>
-            <div className="tiq-cell-label">Tarif treaty</div>
-            <div className="tiq-success-val">
-              <span className="tiq-rate-strike">20%</span>
-              <span className="tiq-rate-arrow">→</span>
-              <span className={`tiq-rate-pill ${treatyPct === 0 ? 'is-zero' : ''}`}>{treatyPct}%</span>
-            </div>
+          <div className="tiq-result-row">
+            <span className="tiq-result-label">Jenis penghasilan</span>
+            <span className="tiq-result-value">
+              {INCOME_LABELS[result.income_type] ?? result.income_type}
+            </span>
           </div>
-          <div>
-            <div className="tiq-cell-label">Estimasi penghematan</div>
-            <div className="tiq-success-val tiq-mono" style={{ color: 'var(--success)' }}>
-              {formatIDR(savings)}
-            </div>
+          <div className="tiq-result-row">
+            <span className="tiq-result-label">Jumlah transaksi</span>
+            <span className="tiq-result-value tiq-mono">{formatIDR(amount)}</span>
           </div>
-          <div>
-            <div className="tiq-cell-label">Estimasi review</div>
-            <div className="tiq-success-val">2 hari kerja</div>
+          <div className="tiq-result-row">
+            <span className="tiq-result-label">Dasar hukum</span>
+            <span className="tiq-result-value tiq-result-basis">
+              {Icons.scales}
+              {result.legal_basis || '—'}
+            </span>
           </div>
         </div>
 
+        {/* ── Rate comparison ───────────────────────────────── */}
+        <div className="tiq-result-rates">
+          <div className="tiq-result-rate-box is-domestic">
+            <div className="tiq-result-rate-label">Tarif Domestik</div>
+            <div className="tiq-result-rate-pct">20%</div>
+            <div className="tiq-result-rate-sub">PPh Pasal 26</div>
+            <div className="tiq-result-rate-tax tiq-mono">
+              {formatIDR(amount * 0.20)}
+            </div>
+          </div>
+
+          <div className="tiq-result-rate-arrow">{Icons.arrowRight}</div>
+
+          <div className={`tiq-result-rate-box is-treaty ${result.risk_flagged ? 'is-blocked' : ''}`}>
+            <div className="tiq-result-rate-label">
+              {result.risk_flagged ? 'Tarif Ditangguhkan' : 'Tarif Treaty'}
+            </div>
+            <div className={`tiq-result-rate-pct ${treatyPct === 0 ? 'is-zero' : ''} ${result.risk_flagged ? 'is-flagged' : ''}`}>
+              {result.risk_flagged ? '—' : `${treatyPct}%`}
+            </div>
+            <div className="tiq-result-rate-sub">
+              {result.risk_flagged ? 'Pending tinjauan manual' : (result.legal_basis || 'Treaty rate')}
+            </div>
+            <div className="tiq-result-rate-tax tiq-mono">
+              {result.risk_flagged ? '—' : formatIDR(amount * treatyPct / 100)}
+            </div>
+          </div>
+        </div>
+
+        {/* ── Savings banner ────────────────────────────────── */}
+        {!result.risk_flagged && savings > 0 && (
+          <div className="tiq-result-savings">
+            <span className="tiq-result-savings-label">{Icons.sparkle} Estimasi penghematan pajak</span>
+            <span className="tiq-result-savings-val tiq-mono">{formatIDR(savings)}</span>
+          </div>
+        )}
+
+        {/* ── Next steps ────────────────────────────────────── */}
         <div className="tiq-success-next">
           <div className="tiq-success-next-title">Langkah selanjutnya</div>
           <ol>
             <li>Tim pajak internal akan meninjau permohonan dan dokumen pendukung.</li>
-            <li>Anda akan menerima notifikasi email saat status berubah.</li>
+            <li>Anda akan menerima notifikasi saat status berubah.</li>
             <li>
-              Setelah disetujui, faktur dapat diterbitkan dengan tarif treaty{' '}
-              {treatyPct}%.
+              {result.risk_flagged
+                ? 'Jika tinjauan manual disetujui, tarif treaty akan diterapkan secara manual.'
+                : `Setelah disetujui, faktur dapat diterbitkan dengan tarif treaty ${treatyPct}%.`}
             </li>
           </ol>
         </div>
 
+        {/* ── Actions ───────────────────────────────────────── */}
         <div className="tiq-success-actions">
-          <button
-            className="tiq-btn tiq-btn-ghost"
-            onClick={() => navigate('/dashboard')}
-          >
-            Kembali ke Dashboard
+          <button className="tiq-btn tiq-btn-ghost" onClick={() => navigate('/dashboard')}>
+            {Icons.arrowLeft} Dashboard
           </button>
-          <button
-            className="tiq-btn tiq-btn-primary"
-            onClick={() => navigate('/approval-queue')}
-          >
-            Lihat status permohonan
-          </button>
+          {user?.role === 'company_tax_team' && (
+            <button className="tiq-btn tiq-btn-primary" onClick={() => navigate('/approval-queue')}>
+              Lihat antrean persetujuan {Icons.arrowRight}
+            </button>
+          )}
         </div>
+
       </div>
     </div>
   )

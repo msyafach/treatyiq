@@ -40,4 +40,6 @@ export const Icons = {
   scales:    <Icon d={<><path d="M12 3v18M3 7h18M5 7l-2 7a4 4 0 0 0 8 0l-2-7M19 7l-2 7a4 4 0 0 0 8 0l-2-7"/></>}/>,
   receipt:   <Icon d={<><path d="M4 2v20l3-2 3 2 3-2 3 2 3-2 3 2V2H4z"/><line x1="8" y1="7" x2="16" y2="7"/><line x1="8" y1="11" x2="16" y2="11"/><line x1="8" y1="15" x2="13" y2="15"/></>}/>,
   trendUp:   <Icon d={<><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></>}/>,
+  edit:      <Icon d={<><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></>}/>,
+  undo:      <Icon d={<><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.52"/></>}/>,
 }

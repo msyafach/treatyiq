@@ -106,6 +106,94 @@ function DetailDrawer({ s, onClose }) {
   )
 }
 
+function exportLaporan(stats, user) {
+  const submissions = stats.recent_submissions || []
+  const exportDate = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+  const rows = submissions.map((s) => `
+    <tr>
+      <td class="mono">${s.id}</td>
+      <td>${s.vendor_name || '—'}</td>
+      <td>${s.country || '—'}</td>
+      <td>${INCOME_LABELS[s.income_type] || s.income_type_display || '—'}</td>
+      <td class="num">${new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(s.amount_idr || 0)}</td>
+      <td class="center">${s.treaty_rate_pct ?? '—'}%</td>
+      <td>${s.status || '—'}</td>
+    </tr>
+  `).join('')
+
+  const win = window.open('', '_blank')
+  win.document.write(`
+    <!DOCTYPE html>
+    <html lang="id">
+    <head>
+      <meta charset="UTF-8" />
+      <title>Laporan Kepatuhan P3B — TreatyIQ</title>
+      <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: Arial, sans-serif; padding: 48px; font-size: 12px; color: #1e293b; }
+        header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 28px; border-bottom: 2px solid #0095D6; padding-bottom: 16px; }
+        header h1 { font-size: 20px; font-weight: 700; }
+        header p { font-size: 11px; color: #64748b; margin-top: 4px; }
+        .meta { text-align: right; font-size: 11px; color: #64748b; line-height: 1.8; }
+        .summary { display: flex; gap: 24px; margin-bottom: 28px; }
+        .summary-box { flex: 1; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px 18px; }
+        .summary-box label { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: #64748b; }
+        .summary-box .val { font-size: 18px; font-weight: 700; margin-top: 4px; }
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: left; padding: 8px 12px; font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: #64748b; background: #f8fafc; border-bottom: 1px solid #e2e8f0; }
+        td { padding: 9px 12px; border-bottom: 1px solid #f1f5f9; font-size: 12px; }
+        .mono { font-family: monospace; font-size: 11px; }
+        .num { text-align: right; }
+        .center { text-align: center; }
+        footer { margin-top: 32px; font-size: 10px; color: #94a3b8; text-align: center; }
+        @media print { body { padding: 24px; } }
+      </style>
+    </head>
+    <body>
+      <header>
+        <div>
+          <h1>Laporan Kepatuhan P3B</h1>
+          <p>TreatyIQ · RSM Indonesia · ${user?.company_name || ''}</p>
+        </div>
+        <div class="meta">
+          <div>Diekspor: ${exportDate}</div>
+          <div>Oleh: ${user?.full_name || ''}</div>
+        </div>
+      </header>
+      <div class="summary">
+        <div class="summary-box">
+          <label>Total Penghematan Pajak</label>
+          <div class="val">${new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(stats.total_tax_savings_idr || 0)}</div>
+        </div>
+        <div class="summary-box">
+          <label>Menunggu Persetujuan</label>
+          <div class="val">${stats.pending_approvals ?? 0}</div>
+        </div>
+        <div class="summary-box">
+          <label>Disetujui Bulan Ini</label>
+          <div class="val">${stats.approved_this_month ?? 0}</div>
+        </div>
+        <div class="summary-box">
+          <label>Total Vendor</label>
+          <div class="val">${stats.total_vendors ?? 0}</div>
+        </div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th><th>Vendor</th><th>Negara</th><th>Jenis Penghasilan</th><th class="num">Jumlah</th><th class="center">Tarif P3B</th><th>Status</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <footer>Dokumen ini digenerate otomatis oleh sistem TreatyIQ. Harap verifikasi keakuratan data sebelum digunakan.</footer>
+      <script>window.onload = () => { window.print() }</script>
+    </body>
+    </html>
+  `)
+  win.document.close()
+}
+
 export default function Dashboard() {
   const { user } = useAuth()
   const navigate = useNavigate()
@@ -144,12 +232,14 @@ export default function Dashboard() {
           <p className="tiq-page-sub">Periode: 1 Mei – 31 Mei 2026 · {user?.company_name}</p>
         </div>
         <div className="tiq-page-head-actions">
-          <button className="tiq-btn tiq-btn-ghost">
+          <button className="tiq-btn tiq-btn-ghost" onClick={() => exportLaporan(stats, user)}>
             {Icons.download} Ekspor laporan
           </button>
-          <button className="tiq-btn tiq-btn-primary" onClick={() => navigate('/submissions/new')}>
-            {Icons.plus} Ajukan permohonan
-          </button>
+          {user?.role !== 'company_tax_team' && (
+            <button className="tiq-btn tiq-btn-primary" onClick={() => navigate('/submissions/new')}>
+              {Icons.plus} Ajukan permohonan
+            </button>
+          )}
         </div>
       </div>
 
@@ -189,7 +279,7 @@ export default function Dashboard() {
             sub="aktif 12 bulan terakhir"
             color="#0095D6"
             icon={Icons.users}
-            delta={8}
+
           />
           <Stat
             label="Menunggu Persetujuan"
@@ -197,7 +287,7 @@ export default function Dashboard() {
             sub="perlu tinjauan manual"
             color="#F59E0B"
             icon={Icons.clock}
-            delta={-12}
+
           />
           <Stat
             label="Disetujui Bulan Ini"
@@ -205,7 +295,7 @@ export default function Dashboard() {
             sub="dari permohonan masuk"
             color="#13A538"
             icon={Icons.checkCircle}
-            delta={24}
+
           />
         </div>
       </div>
@@ -312,9 +402,11 @@ export default function Dashboard() {
             <div className="tiq-empty-icon">{Icons.doc}</div>
             <div className="tiq-empty-title">Belum ada permohonan</div>
             <div className="tiq-empty-sub">Ajukan permohonan pertama untuk memulai.</div>
-            <button className="tiq-btn tiq-btn-primary" style={{ marginTop: 14 }} onClick={() => navigate('/submissions/new')}>
-              {Icons.plus} Ajukan Permohonan
-            </button>
+            {user?.role !== 'company_tax_team' && (
+              <button className="tiq-btn tiq-btn-primary" style={{ marginTop: 14 }} onClick={() => navigate('/submissions/new')}>
+                {Icons.plus} Ajukan Permohonan
+              </button>
+            )}
           </div>
         ) : (
           <div className="tiq-table-wrap">

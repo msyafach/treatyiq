@@ -64,10 +64,12 @@ export default function SubmissionWizard() {
         country: data.country,
         income_type: data.income_type,
         amount_idr: data.amount_idr,
-        is_beneficial_owner: true,
-        passes_ppt: data.ppt_passed !== false,
-        has_economic_substance: !!data.has_cor,
-        has_permanent_establishment: false,
+        is_beneficial_owner: data.is_beneficial_owner,
+        passes_ppt: data.passes_ppt,
+        has_economic_substance: data.has_economic_substance,
+        has_permanent_establishment: data.income_type === 'technical_services'
+          ? (data.has_permanent_establishment ?? false)
+          : null,
       })
       submission = res.data
     } catch {

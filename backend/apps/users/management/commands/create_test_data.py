@@ -10,11 +10,11 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         # Create company tax team user
         company_user, created = User.objects.get_or_create(
-            email='pajak@bni.co.id',
+            email='taxteam@company.com',
             defaults={
-                'full_name': 'Tim Pajak BNI',
+                'full_name': 'Tim Pajak Internal',
                 'role': 'company_tax_team',
-                'company_name': 'PT Bank Negara Indonesia (Persero) Tbk',
+                'company_name': 'PT Perusahaan Tbk',
             }
         )
         if created:
@@ -26,11 +26,11 @@ class Command(BaseCommand):
 
         # Create vendor user
         vendor_user, created = User.objects.get_or_create(
-            email='tax@rsm.sg',
+            email='tax@vendor.com',
             defaults={
-                'full_name': 'RSM Singapore Tax',
+                'full_name': 'Tax Consultant',
                 'role': 'vendor',
-                'company_name': 'RSM Singapore Pte Ltd',
+                'company_name': 'Global Consulting Pte Ltd',
             }
         )
         if created:
@@ -43,7 +43,7 @@ class Command(BaseCommand):
         # Create test submissions
         test_submissions = [
             {
-                'vendor_name': 'RSM Singapore Pte Ltd',
+                'vendor_name': 'Global Consulting Pte Ltd',
                 'foreign_tax_id': 'SG-201234567A',
                 'country': 'singapore',
                 'income_type': 'technical_services',
@@ -55,7 +55,7 @@ class Command(BaseCommand):
                 'status': 'approved',
             },
             {
-                'vendor_name': 'Nomura Securities Japan',
+                'vendor_name': 'Takeda Advisory KK',
                 'foreign_tax_id': 'JP-0012345678901',
                 'country': 'japan',
                 'income_type': 'royalties',
@@ -66,7 +66,7 @@ class Command(BaseCommand):
                 'status': 'pending',
             },
             {
-                'vendor_name': 'Shell Netherlands BV',
+                'vendor_name': 'Meridian Capital BV',
                 'foreign_tax_id': 'NL-80098765',
                 'country': 'netherlands',
                 'income_type': 'dividends_qualified',
@@ -88,7 +88,7 @@ class Command(BaseCommand):
                 'status': 'flagged',
             },
             {
-                'vendor_name': 'BHP Group Australia',
+                'vendor_name': 'Southern Cross Ventures Pty Ltd',
                 'foreign_tax_id': 'AU-987654321',
                 'country': 'australia',
                 'income_type': 'dividends_general',
@@ -101,7 +101,6 @@ class Command(BaseCommand):
         ]
 
         from apps.submissions.treaty_engine import calculate_treaty_rate
-        from datetime import date
 
         for data in test_submissions:
             if Submission.objects.filter(vendor_name=data['vendor_name'], tax_year=2026).exists():
@@ -140,5 +139,5 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.SUCCESS('\n✅ Test data created successfully!'))
         self.stdout.write('Login credentials:')
-        self.stdout.write('  Company: pajak@bni.co.id / TreatyIQ@2026')
-        self.stdout.write('  Vendor:  tax@rsm.sg / TreatyIQ@2026')
+        self.stdout.write('  Company: taxteam@company.com / TreatyIQ@2026')
+        self.stdout.write('  Vendor:  tax@vendor.com / TreatyIQ@2026')

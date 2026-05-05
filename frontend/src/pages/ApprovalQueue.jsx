@@ -2,13 +2,76 @@ import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Navigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
-import { getSubmissions, approveSubmission, rejectSubmission } from '../api/submissions'
+import { getSubmissions, approveSubmission, rejectSubmission, revokeSubmission } from '../api/submissions'
+import { getDocuments } from '../api/documents'
 import { useAuth } from '../context/AuthContext'
 import { Icons } from '../components/icons'
 import StatusBadge from '../components/StatusBadge'
 import CountryChip from '../components/CountryChip'
 import Avatar from '../components/Avatar'
 import { formatIDR, INCOME_LABELS } from '../utils/treatyRates'
+
+const DOC_TYPE_LABELS = {
+  dgt1:               'Form DGT-1',
+  cor:                'Certificate of Residence',
+  service_agreement:  'Service Agreement',
+  beneficial_owner:   'Beneficial Owner Decl.',
+  economic_substance: 'Bukti Economic Substance',
+}
+
+function DocPanel({ submissionId }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ['documents', submissionId],
+    queryFn: () => getDocuments({ submission: submissionId }).then(r => r.data),
+  })
+
+  const docs = data?.results ?? data ?? []
+
+  if (isLoading) return (
+    <div className="tiq-docpanel-loading">
+      <div className="tiq-spinner" style={{ width: 18, height: 18 }} /> Memuat dokumen…
+    </div>
+  )
+
+  if (docs.length === 0) return (
+    <div className="tiq-docpanel-empty">Belum ada dokumen yang diunggah.</div>
+  )
+
+  return (
+    <div className="tiq-docpanel">
+      <div className="tiq-docpanel-title">{Icons.folder} Dokumen yang diunggah ({docs.length})</div>
+      <div className="tiq-docpanel-list">
+        {docs.map(doc => {
+          const url = doc.file_url || doc.file
+          const name = doc.filename || doc.file?.split('/').pop() || '—'
+          return (
+            <div key={doc.id} className="tiq-docpanel-item">
+              <div className="tiq-docpanel-item-icon">{Icons.doc}</div>
+              <div className="tiq-docpanel-item-info">
+                <div className="tiq-docpanel-item-type">
+                  {DOC_TYPE_LABELS[doc.document_type] ?? doc.document_type}
+                </div>
+                <div className="tiq-docpanel-item-name">{name}</div>
+              </div>
+              {url ? (
+                <a
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="tiq-btn tiq-btn-ghost tiq-btn-sm"
+                >
+                  {Icons.search} Preview
+                </a>
+              ) : (
+                <span className="tiq-docpanel-item-unavail">Tidak tersedia</span>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
 
 const TABS = [
   { key: 'all',      label: 'Semua' },
@@ -18,7 +81,8 @@ const TABS = [
   { key: 'rejected', label: 'Ditolak',   dot: '#94A3B8' },
 ]
 
-function ApprovalCard({ s, onReject, onApprove }) {
+function ApprovalCard({ s, onReject, onApprove, onRevoke }) {
+  const [docsOpen, setDocsOpen] = useState(false)
   const savings = s.amount_idr * (20 - (s.treaty_rate_pct ?? 20)) / 100
 
   return (
@@ -111,12 +175,39 @@ function ApprovalCard({ s, onReject, onApprove }) {
         </div>
       )}
 
-      {s.status === 'approved' && s.reviewed_by_name && (
+      {(s.status === 'approved' || s.status === 'rejected') && (
         <div className="tiq-app-approved-meta">
-          <span style={{ color: 'var(--success)' }}>{Icons.checkCircle}</span>
-          Disetujui oleh <strong style={{ marginLeft: 4 }}>{s.reviewed_by_name}</strong>
+          {s.status === 'approved' ? (
+            <>
+              <span style={{ color: 'var(--success)' }}>{Icons.checkCircle}</span>
+              Disetujui oleh <strong style={{ marginLeft: 4 }}>{s.reviewed_by_name || '—'}</strong>
+            </>
+          ) : (
+            <>
+              <span style={{ color: 'var(--danger)' }}>{Icons.x}</span>
+              Ditolak oleh <strong style={{ marginLeft: 4 }}>{s.reviewed_by_name || '—'}</strong>
+            </>
+          )}
+          <button
+            className="tiq-btn tiq-btn-ghost tiq-btn-sm"
+            style={{ marginLeft: 'auto' }}
+            onClick={() => onRevoke(s)}
+          >
+            {Icons.edit} Batalkan keputusan
+          </button>
         </div>
       )}
+
+      <button
+        className="tiq-app-docs-toggle"
+        onClick={() => setDocsOpen((v) => !v)}
+      >
+        {Icons.folder}
+        {docsOpen ? 'Sembunyikan dokumen' : 'Lihat dokumen'}
+        <span className="tiq-app-docs-chevron" style={{ transform: docsOpen ? 'rotate(180deg)' : undefined }}>▾</span>
+      </button>
+
+      {docsOpen && <DocPanel submissionId={s.id} />}
     </article>
   )
 }
@@ -127,14 +218,22 @@ export default function ApprovalQueue() {
   const [tab, setTab] = useState('all')
   const [rejectTarget, setRejectTarget] = useState(null)
   const [rejectReason, setRejectReason] = useState('')
+  const [revokeTarget, setRevokeTarget] = useState(null)
 
   if (user?.role !== 'company_tax_team') {
     return <Navigate to="/dashboard" replace />
   }
 
+  // Filtered list for the active tab
   const { data, isLoading } = useQuery({
     queryKey: ['submissions', tab],
     queryFn: () => getSubmissions(tab !== 'all' ? { status: tab } : {}).then((r) => r.data),
+  })
+
+  // Global counts (always fetch all so tab badges are accurate)
+  const { data: allData } = useQuery({
+    queryKey: ['submissions', 'all'],
+    queryFn: () => getSubmissions({}).then((r) => r.data),
   })
 
   const approveMut = useMutation({
@@ -159,12 +258,24 @@ export default function ApprovalQueue() {
     onError: () => toast.error('Gagal menolak permohonan'),
   })
 
-  const submissions = data?.results || data || []
+  const revokeMut = useMutation({
+    mutationFn: (id) => revokeSubmission(id),
+    onSuccess: () => {
+      toast.success('Keputusan dibatalkan — permohonan kembali ke Menunggu')
+      setRevokeTarget(null)
+      qc.invalidateQueries({ queryKey: ['submissions'] })
+      qc.invalidateQueries({ queryKey: ['dashboard-stats'] })
+    },
+    onError: () => toast.error('Gagal membatalkan keputusan'),
+  })
 
-  // Count per status for tab badges
+  const submissions = data?.results || data || []
+  const allSubmissions = allData?.results || allData || []
+
+  // Global counts derived from the full unfiltered list
   const counts = {}
-  submissions.forEach((s) => { counts[s.status] = (counts[s.status] || 0) + 1 })
-  counts.all = submissions.length
+  allSubmissions.forEach((s) => { counts[s.status] = (counts[s.status] || 0) + 1 })
+  counts.all = allSubmissions.length
 
   return (
     <div className="tiq-page">
@@ -205,8 +316,39 @@ export default function ApprovalQueue() {
               s={s}
               onReject={setRejectTarget}
               onApprove={(id) => approveMut.mutate(id)}
+              onRevoke={setRevokeTarget}
             />
           ))}
+        </div>
+      )}
+
+      {/* Revoke modal */}
+      {revokeTarget && (
+        <div className="tiq-modal-backdrop" onClick={() => setRevokeTarget(null)}>
+          <div className="tiq-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="tiq-modal-head">
+              <div>
+                <h3>Batalkan keputusan?</h3>
+                <p>
+                  Permohonan <strong>{revokeTarget.vendor_name}</strong> akan kembali ke status{' '}
+                  <strong>Menunggu</strong> dan dapat ditinjau ulang.
+                </p>
+              </div>
+              <button className="tiq-icon-btn" onClick={() => setRevokeTarget(null)} aria-label="Tutup">
+                {Icons.x}
+              </button>
+            </div>
+            <div className="tiq-modal-foot">
+              <button className="tiq-btn tiq-btn-ghost" onClick={() => setRevokeTarget(null)}>Batal</button>
+              <button
+                className="tiq-btn tiq-btn-warning"
+                disabled={revokeMut.isPending}
+                onClick={() => revokeMut.mutate(revokeTarget.id)}
+              >
+                {revokeMut.isPending ? 'Memproses…' : `${Icons.edit} Batalkan keputusan`}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

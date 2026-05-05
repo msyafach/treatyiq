@@ -5,7 +5,7 @@ import Avatar from './Avatar'
 
 const NAV_ITEMS = [
   { to: '/dashboard',      icon: Icons.dashboard,    label: 'Dashboard' },
-  { to: '/submissions/new', icon: Icons.plus,        label: 'Ajukan Permohonan' },
+  { to: '/submissions/new', icon: Icons.plus,        label: 'Ajukan Permohonan', roles: ['vendor'] },
   { to: '/approval-queue', icon: Icons.checkCircle,  label: 'Antrean Persetujuan', roles: ['company_tax_team'] },
   { to: '/documents',      icon: Icons.folder,       label: 'Brankas Dokumen' },
 ]
@@ -16,14 +16,9 @@ export default function Sidebar() {
   return (
     <aside className="tiq-side">
       {/* Brand */}
-      <div className="tiq-brand-v tiq-brand-stripe" style={{ paddingTop: 26 }}>
-        <div className="tiq-brand-stripe-bar">
-          <span style={{ background: 'rgba(255,255,255,.7)' }} />
-          <span style={{ background: '#55B249' }} />
-          <span style={{ background: 'rgba(255,255,255,.9)' }} />
-        </div>
+      <div className="tiq-brand-v tiq-brand-stripe" style={{ paddingTop: 22 }}>
+        <img src="/rsm-logo.svg" alt="RSM" className="tiq-brand-rsm-logo" />
         <div className="tiq-brand-product">TreatyIQ</div>
-        <div className="tiq-brand-byline-tight">An RSM product · Portal P3B</div>
       </div>
 
       {/* Nav */}

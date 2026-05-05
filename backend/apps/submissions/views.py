@@ -89,6 +89,25 @@ class RejectSubmissionView(APIView):
         return Response(SubmissionListSerializer(submission).data)
 
 
+class RevokeSubmissionView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        if request.user.role != 'company_tax_team':
+            return Response({'detail': 'Akses ditolak.'}, status=status.HTTP_403_FORBIDDEN)
+        try:
+            submission = Submission.objects.get(pk=pk)
+        except Submission.DoesNotExist:
+            return Response({'detail': 'Tidak ditemukan.'}, status=status.HTTP_404_NOT_FOUND)
+        if submission.status not in ('approved', 'rejected'):
+            return Response({'detail': 'Hanya permohonan yang sudah disetujui atau ditolak yang bisa dibatalkan.'}, status=status.HTTP_400_BAD_REQUEST)
+        submission.status = 'pending'
+        submission.reviewed_by = None
+        submission.rejection_reason = ''
+        submission.save()
+        return Response(SubmissionListSerializer(submission).data)
+
+
 class DashboardStatsView(APIView):
     permission_classes = [IsAuthenticated]
 
