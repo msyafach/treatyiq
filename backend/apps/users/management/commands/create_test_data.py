@@ -17,12 +17,10 @@ class Command(BaseCommand):
                 'company_name': 'PT Perusahaan Tbk',
             }
         )
-        if created:
-            company_user.set_password('TreatyIQ@2026')
-            company_user.save()
-            self.stdout.write(self.style.SUCCESS(f'Created company user: {company_user.email}'))
-        else:
-            self.stdout.write(f'Company user already exists: {company_user.email}')
+        company_user.set_password('TreatyIQ@2026')
+        company_user.save()
+        verb = 'Created' if created else 'Updated'
+        self.stdout.write(self.style.SUCCESS(f'{verb} company user: {company_user.email}'))
 
         # Create vendor user
         vendor_user, created = User.objects.get_or_create(
@@ -33,12 +31,10 @@ class Command(BaseCommand):
                 'company_name': 'Global Consulting Pte Ltd',
             }
         )
-        if created:
-            vendor_user.set_password('TreatyIQ@2026')
-            vendor_user.save()
-            self.stdout.write(self.style.SUCCESS(f'Created vendor user: {vendor_user.email}'))
-        else:
-            self.stdout.write(f'Vendor user already exists: {vendor_user.email}')
+        vendor_user.set_password('TreatyIQ@2026')
+        vendor_user.save()
+        verb = 'Created' if created else 'Updated'
+        self.stdout.write(self.style.SUCCESS(f'{verb} vendor user: {vendor_user.email}'))
 
         # Create test submissions
         test_submissions = [
