@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Navigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
-import { getDocuments, uploadDocument } from '../api/documents'
+import { getDocuments, uploadDocument, getDocumentDownloadUrl } from '../api/documents'
 import { getSubmissions } from '../api/submissions'
 import { useAuth } from '../context/AuthContext'
 import { Icons } from '../components/icons'
@@ -371,20 +371,32 @@ export default function DocumentVault() {
                     <td className="ta-right td-muted tiq-mono">{fmtSize(doc.file_size)}</td>
                     <td><StatusBadge status={doc.submission_status} /></td>
                     <td className="ta-right">
-                      {doc.file_url ? (
-                        <a
-                          href={doc.file_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="tiq-icon-btn-sm"
-                          style={{ display: 'inline-flex', color: 'var(--text-muted)' }}
-                          aria-label="Unduh"
-                        >
-                          {Icons.download}
-                        </a>
-                      ) : (
-                        <span className="tiq-icon-btn-sm" style={{ opacity: .3 }}>{Icons.download}</span>
-                      )}
+                      <div style={{ display: 'inline-flex', gap: 4 }}>
+                        {doc.file_url ? (
+                          <a
+                            href={doc.file_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="tiq-icon-btn-sm"
+                            title="Preview"
+                          >
+                            {Icons.eye}
+                          </a>
+                        ) : (
+                          <span className="tiq-icon-btn-sm" style={{ opacity: .3 }}>{Icons.eye}</span>
+                        )}
+                        {doc.file_url ? (
+                          <a
+                            href={getDocumentDownloadUrl(doc.id)}
+                            className="tiq-icon-btn-sm"
+                            title={`Unduh ${doc.filename || ''}`}
+                          >
+                            {Icons.download}
+                          </a>
+                        ) : (
+                          <span className="tiq-icon-btn-sm" style={{ opacity: .3 }}>{Icons.download}</span>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
