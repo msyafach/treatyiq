@@ -1,4 +1,5 @@
 import re
+from datetime import date
 from django.db import models
 from django.conf import settings
 
@@ -10,35 +11,50 @@ DOCUMENT_TYPE_CHOICES = [
     ('economic_substance', 'Bukti Economic Substance'),
 ]
 
+DOC_TYPE_LABEL = {
+    'dgt1':               'DGT1',
+    'cor':                'CoR',
+    'service_agreement':  'ServiceAgreement',
+    'beneficial_owner':   'BeneficialOwner',
+    'economic_substance': 'EconomicSubstance',
+}
+
 
 def _slugify(text):
     return re.sub(r'[^\w-]', '-', text.lower().strip()).strip('-') or 'unknown'
 
 
+def _formatted_filename(instance, ext):
+    """
+    Format: {TipeDoc}_{TIQ-ID}_{YYYYMMDD}.{ext}
+    Contoh: DGT1_TIQ00042_20260105.pdf
+    """
+    doc_label = DOC_TYPE_LABEL.get(instance.document_type, instance.document_type or 'Doc')
+    sub_id    = instance.submission_id or 0
+    date_str  = date.today().strftime('%Y%m%d')
+    return f'{doc_label}_TIQ{sub_id:05d}_{date_str}.{ext}'
+
+
 def document_upload_path(instance, filename):
     """
-    Path: documents/{company_slug}/{submission_id}/{doc_type}/{safe_filename}
-
-    Contoh:
-      documents/bank-negara-indonesia/42/dgt1/RSM_DGT1_2026.pdf
+    Path: documents/{company_slug}/{submission_id}/{doc_type}/{formatted_name}
+    Contoh: documents/rsm-singapore/42/dgt1/DGT1_TIQ00042_20260105.pdf
     """
-    parts = filename.rsplit('.', 1)
-    stem = re.sub(r'[^\w.-]', '_', parts[0])[:80]
-    ext  = parts[1].lower() if len(parts) > 1 else 'pdf'
+    ext = filename.rsplit('.', 1)[-1].lower() if '.' in filename else 'pdf'
 
     company = ''
     if instance.uploaded_by_id:
-        # uploaded_by sudah di-set di serializer sebelum save
         try:
             company = instance.uploaded_by.company_name
         except Exception:
             pass
     company_slug = _slugify(company) if company else f'user-{instance.uploaded_by_id or 0}'
 
-    sub_id   = instance.submission_id or 0
-    doc_type = instance.document_type or 'misc'
+    sub_id       = instance.submission_id or 0
+    doc_type     = instance.document_type or 'misc'
+    fname        = _formatted_filename(instance, ext)
 
-    return f'documents/{company_slug}/{sub_id}/{doc_type}/{stem}.{ext}'
+    return f'documents/{company_slug}/{sub_id}/{doc_type}/{fname}'
 
 
 class Document(models.Model):

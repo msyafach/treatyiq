@@ -38,8 +38,12 @@ class DocumentSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data):
         file = validated_data.get('file')
-        validated_data['filename'] = file.name if file else ''
         validated_data['file_size'] = file.size if file else 0
-        # uploaded_by harus di-set sebelum save agar upload_to callable bisa membaca company_name
+        validated_data['filename'] = ''  # diisi setelah save, dari path aktual
         validated_data['uploaded_by'] = self.context['request'].user
-        return super().create(validated_data)
+        instance = super().create(validated_data)
+        # Ambil nama file terformat dari path yang sudah disimpan storage
+        if instance.file:
+            instance.filename = instance.file.name.split('/')[-1]
+            instance.save(update_fields=['filename'])
+        return instance
