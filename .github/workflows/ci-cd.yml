@@ -170,8 +170,8 @@ jobs:
           set -e
 
           # Append secrets ke .env — Docker Compose pakai nilai terakhir jika duplikat
-          ENV_FILE=/opt/treatyiq/.env
-          mkdir -p /opt/treatyiq
+          ENV_FILE=$HOME/treatyiq/.env
+          mkdir -p $HOME/treatyiq
           touch $ENV_FILE
           cat >> $ENV_FILE << EOF
           USE_S3=True
