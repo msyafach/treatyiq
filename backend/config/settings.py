@@ -92,6 +92,8 @@ if USE_S3:
     AWS_SECRET_ACCESS_KEY = config('AWS_SECRET_ACCESS_KEY')
     AWS_STORAGE_BUCKET_NAME = config('AWS_STORAGE_BUCKET_NAME')
     AWS_S3_REGION_NAME       = config('AWS_S3_REGION_NAME', default='ap-southeast-3')
+    AWS_S3_ENDPOINT_URL      = config('AWS_S3_ENDPOINT_URL',
+                                   default=f"https://s3.{config('AWS_S3_REGION_NAME', default='ap-southeast-3')}.amazonaws.com")
     AWS_DEFAULT_ACL          = 'private'
     AWS_S3_FILE_OVERWRITE    = False
     AWS_QUERYSTRING_AUTH     = True

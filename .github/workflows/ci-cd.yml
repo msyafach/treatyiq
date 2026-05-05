@@ -191,6 +191,7 @@ jobs:
           AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
           AWS_STORAGE_BUCKET_NAME=${AWS_STORAGE_BUCKET_NAME}
           AWS_S3_REGION_NAME=ap-southeast-3
+          AWS_S3_ENDPOINT_URL=https://s3.ap-southeast-3.amazonaws.com
           GHCR_OWNER=${GHCR_OWNER}
           EOF
 
