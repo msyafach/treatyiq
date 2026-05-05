@@ -12,4 +12,4 @@ export const deleteDocument = (id) =>
   api.delete(`/documents/${id}/`)
 
 export const getDocumentDownloadUrl = (id) =>
-  `/api/documents/${id}/download/`
+  api.get(`/documents/${id}/download/`).then((r) => r.data)

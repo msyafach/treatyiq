@@ -1,6 +1,5 @@
 import logging
 from django.conf import settings
-from django.http import HttpResponseRedirect
 from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -98,9 +97,8 @@ class DocumentDownloadView(APIView):
                 },
                 ExpiresIn=300,
             )
-            return HttpResponseRedirect(url)
+            return Response({'url': url, 'filename': filename})
 
-        # Local: stream file with attachment header
-        from django.http import FileResponse
-        response = FileResponse(doc.file.open('rb'), as_attachment=True, filename=filename)
-        return response
+        # Local: return a signed-enough URL with the formatted filename hint
+        file_url = request.build_absolute_uri(doc.file.url)
+        return Response({'url': file_url, 'filename': filename})

@@ -3,13 +3,28 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { getSubmission, approveSubmission, rejectSubmission, revokeSubmission } from '../api/submissions'
-import { getDocuments } from '../api/documents'
+import { getDocuments, getDocumentDownloadUrl } from '../api/documents'
 import { useAuth } from '../context/AuthContext'
 import { Icons } from '../components/icons'
 import StatusBadge from '../components/StatusBadge'
 import CountryChip from '../components/CountryChip'
 import Avatar from '../components/Avatar'
 import { formatIDR, INCOME_LABELS } from '../utils/treatyRates'
+
+async function triggerDownload(id) {
+  try {
+    const { url, filename } = await getDocumentDownloadUrl(id)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    a.style.display = 'none'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+  } catch {
+    toast.error('Gagal mengunduh dokumen')
+  }
+}
 
 const DOC_TYPE_LABELS = {
   dgt1:               'Form DGT-1',
@@ -43,9 +58,18 @@ function DocList({ submissionId }) {
                 <div className="tiq-docpanel-item-name">{name}</div>
               </div>
               {url ? (
-                <a href={url} target="_blank" rel="noopener noreferrer" className="tiq-btn tiq-btn-ghost tiq-btn-sm">
-                  {Icons.search} Preview
-                </a>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <a href={url} target="_blank" rel="noopener noreferrer" className="tiq-btn tiq-btn-ghost tiq-btn-sm">
+                    {Icons.eye} Preview
+                  </a>
+                  <button
+                    type="button"
+                    className="tiq-btn tiq-btn-ghost tiq-btn-sm"
+                    onClick={() => triggerDownload(doc.id)}
+                  >
+                    {Icons.download} Unduh
+                  </button>
+                </div>
               ) : (
                 <span className="tiq-docpanel-item-unavail">Tidak tersedia</span>
               )}

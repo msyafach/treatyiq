@@ -19,6 +19,21 @@ const DOC_TYPE_LABELS = {
 const DOC_TYPE_KEYS = Object.keys(DOC_TYPE_LABELS)
 const MAX_SIZE = 10 * 1024 * 1024
 
+async function triggerDownload(id) {
+  try {
+    const { url, filename } = await getDocumentDownloadUrl(id)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    a.style.display = 'none'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+  } catch {
+    toast.error('Gagal mengunduh dokumen')
+  }
+}
+
 function fmtDate(iso) {
   if (!iso) return '—'
   return new Date(iso).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -385,17 +400,16 @@ export default function DocumentVault() {
                         ) : (
                           <span className="tiq-icon-btn-sm" style={{ opacity: .3 }}>{Icons.eye}</span>
                         )}
-                        {doc.file_url ? (
-                          <a
-                            href={getDocumentDownloadUrl(doc.id)}
-                            className="tiq-icon-btn-sm"
-                            title={`Unduh ${doc.filename || ''}`}
-                          >
-                            {Icons.download}
-                          </a>
-                        ) : (
-                          <span className="tiq-icon-btn-sm" style={{ opacity: .3 }}>{Icons.download}</span>
-                        )}
+                        <button
+                          type="button"
+                          className="tiq-icon-btn-sm"
+                          title={`Unduh ${doc.filename || ''}`}
+                          disabled={!doc.file_url}
+                          style={!doc.file_url ? { opacity: .3, cursor: 'default' } : {}}
+                          onClick={() => triggerDownload(doc.id)}
+                        >
+                          {Icons.download}
+                        </button>
                       </div>
                     </td>
                   </tr>
