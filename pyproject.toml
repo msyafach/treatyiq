@@ -1,0 +1,9 @@
+[project]
+name = "tax-treatyiq"
+version = "0.1.0"
+requires-python = ">=3.12"
+description = "Portal Kepatuhan PMK 112/2025 untuk perusahaan multinasional Indonesia"
+dependencies = []
+
+[tool.uv.workspace]
+members = ["backend"]
