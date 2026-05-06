@@ -49,7 +49,7 @@ function fmtSize(bytes) {
 function exportAuditPDF(filtered) {
   const rows = filtered.map((doc) => `
     <tr>
-      <td>${doc.file?.split('/').pop() || '—'}</td>
+      <td>${doc.filename || doc.file?.split('/').pop()?.split('?')[0] || '—'}</td>
       <td>${doc.vendor_name || '—'}</td>
       <td>${DOC_TYPE_LABELS[doc.document_type] || doc.document_type || '—'}</td>
       <td>${doc.tax_year || '—'}</td>
@@ -373,7 +373,7 @@ export default function DocumentVault() {
                     <td className="td-doc">
                       <div className="tiq-doc-thumb">{Icons.doc}</div>
                       <span className="tiq-mono tiq-doc-name" style={{ fontSize: 12 }}>
-                        {doc.file?.split('/').pop() || '—'}
+                        {doc.filename || doc.file?.split('/').pop()?.split('?')[0] || '—'}
                       </span>
                     </td>
                     <td className="td-vendor">

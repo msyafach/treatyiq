@@ -43,7 +43,7 @@ function DocPanel({ submissionId }) {
       <div className="tiq-docpanel-list">
         {docs.map(doc => {
           const url = doc.file_url || doc.file
-          const name = doc.filename || doc.file?.split('/').pop() || '—'
+          const name = doc.filename || doc.file?.split('/').pop()?.split('?')[0] || '—'
           return (
             <div key={doc.id} className="tiq-docpanel-item">
               <div className="tiq-docpanel-item-icon">{Icons.doc}</div>

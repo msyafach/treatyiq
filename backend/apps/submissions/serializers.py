@@ -13,6 +13,7 @@ class SubmissionListSerializer(serializers.ModelSerializer):
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     treaty_rate_pct = serializers.SerializerMethodField()
     domestic_rate_pct = serializers.SerializerMethodField()
+    documents_count = serializers.IntegerField(source='documents.count', read_only=True)
 
     class Meta:
         model = Submission
@@ -25,6 +26,7 @@ class SubmissionListSerializer(serializers.ModelSerializer):
             'rejection_reason', 'tax_year',
             'submitted_by', 'submitted_by_name',
             'reviewed_by', 'reviewed_by_name',
+            'documents_count',
             'created_at', 'updated_at',
         )
 

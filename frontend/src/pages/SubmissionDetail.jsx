@@ -49,7 +49,7 @@ function DocList({ submissionId }) {
       <div className="tiq-docpanel-list">
         {docs.map(doc => {
           const url = doc.file_url || doc.file
-          const name = doc.filename || doc.file?.split('/').pop() || '—'
+          const name = doc.filename || doc.file?.split('/').pop()?.split('?')[0] || '—'
           return (
             <div key={doc.id} className="tiq-docpanel-item">
               <div className="tiq-docpanel-item-icon">{Icons.doc}</div>
@@ -153,7 +153,7 @@ export default function SubmissionDetail() {
     </div>
   )
 
-  const savings = s.amount_idr * (20 - (s.treaty_rate_pct ?? 20)) / 100
+  const savings = parseFloat(s.amount_idr) * (20 - (s.treaty_rate_pct ?? 20)) / 100
   const canAct = isTaxTeam && (s.status === 'pending' || s.status === 'flagged')
   const canRevoke = isTaxTeam && (s.status === 'approved' || s.status === 'rejected')
 
@@ -250,7 +250,7 @@ export default function SubmissionDetail() {
 
           <section className="tiq-card">
             <div className="tiq-card-head">
-              <h3 className="tiq-card-title">{Icons.folder} Dokumen ({s.documents?.length ?? 0})</h3>
+              <h3 className="tiq-card-title">{Icons.folder} Dokumen ({s.documents_count ?? 0})</h3>
             </div>
             <DocList submissionId={s.id} />
           </section>
