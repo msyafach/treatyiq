@@ -1,7 +1,7 @@
 from decimal import Decimal
 
 def _r(rate, basis):
-    return {'rate': Decimal(str(rate)), 'basis': basis}
+    return {'rate': Decimal(str(rate)) / 100, 'basis': basis}
 
 def _country(name_id, div_gen, div_qual, interest, royalty):
     return {

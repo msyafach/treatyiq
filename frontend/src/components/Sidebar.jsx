@@ -16,39 +16,41 @@ export default function Sidebar() {
 
   return (
     <aside className="tiq-side">
-      {/* Brand */}
-      <div className="tiq-brand-v tiq-brand-stripe" style={{ paddingTop: 22 }}>
-        <img src="/rsm-logo.svg" alt="RSM" className="tiq-brand-rsm-logo" />
-        <div className="tiq-brand-product">TreatyIQ</div>
-      </div>
+      <div className="tiq-side-sticky">
+        {/* Brand */}
+        <div className="tiq-brand-v tiq-brand-stripe" style={{ paddingTop: 22 }}>
+          <img src="/rsm-logo.svg" alt="RSM" className="tiq-brand-rsm-logo" />
+          <div className="tiq-brand-product">TreatyIQ</div>
+        </div>
 
-      {/* Nav */}
-      <nav className="tiq-side-nav">
-        {NAV_ITEMS.map(({ to, icon, label, roles }) => {
-          if (roles && !roles.includes(user?.role)) return null
-          return (
-            <NavLink
-              key={to}
-              to={to}
-              className={({ isActive }) =>
-                `tiq-side-link${isActive ? ' is-active' : ''}`
-              }
-            >
-              <span className="tiq-side-icon">{icon}</span>
-              <span className="tiq-side-label">{label}</span>
-            </NavLink>
-          )
-        })}
-      </nav>
+        {/* Nav */}
+        <nav className="tiq-side-nav">
+          {NAV_ITEMS.map(({ to, icon, label, roles }) => {
+            if (roles && !roles.includes(user?.role)) return null
+            return (
+              <NavLink
+                key={to}
+                to={to}
+                className={({ isActive }) =>
+                  `tiq-side-link${isActive ? ' is-active' : ''}`
+                }
+              >
+                <span className="tiq-side-icon">{icon}</span>
+                <span className="tiq-side-label">{label}</span>
+              </NavLink>
+            )
+          })}
+        </nav>
 
-      {/* User footer */}
-      <div className="tiq-side-footer">
-        <div className="tiq-side-user">
-          <Avatar name={user?.full_name} role={user?.role} size={36} />
-          <div className="tiq-side-user-info">
-            <div className="tiq-side-user-name">{user?.full_name}</div>
-            <div className="tiq-side-user-role">
-              {user?.role === 'company_tax_team' ? 'Tim Pajak Internal' : 'Vendor'}
+        {/* User footer */}
+        <div className="tiq-side-footer">
+          <div className="tiq-side-user">
+            <Avatar name={user?.full_name} role={user?.role} size={36} />
+            <div className="tiq-side-user-info">
+              <div className="tiq-side-user-name">{user?.full_name}</div>
+              <div className="tiq-side-user-role">
+                {user?.role === 'company_tax_team' ? 'Tim Pajak Internal' : 'Vendor'}
+              </div>
             </div>
           </div>
         </div>

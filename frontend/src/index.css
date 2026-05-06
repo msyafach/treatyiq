@@ -57,8 +57,10 @@
 
 *, *::before, *::after { box-sizing: border-box; }
 html, body, #root { height: 100%; }
+html { overflow-x: hidden; }
 body {
   margin: 0;
+  overflow-x: hidden;
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-sans);
@@ -90,7 +92,7 @@ a { color: var(--brand); text-decoration: none; }
 .tiq-app-main { padding-top: 4px; }
 
 /* ─── App shell ─────────────────────────────────────────── */
-.tiq-app { display: flex; min-height: 100vh; }
+.tiq-app { display: flex; min-height: 100vh; overflow-x: hidden; }
 .tiq-app-main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
 .tiq-content {
   flex: 1;
@@ -98,6 +100,7 @@ a { color: var(--brand); text-decoration: none; }
   max-width: 1480px;
   width: 100%;
   margin: 0 auto;
+  min-width: 0;
 }
 
 /* ─── Sidebar ───────────────────────────────────────────── */
@@ -105,14 +108,16 @@ a { color: var(--brand); text-decoration: none; }
   width: 240px;
   background: #0095D6;
   color: #fff;
-  display: flex;
-  flex-direction: column;
+  flex-shrink: 0;
+  border-right: 1px solid rgba(255,255,255,.08);
+}
+.tiq-side-sticky {
   position: sticky;
   top: 0;
   height: 100vh;
+  display: flex;
+  flex-direction: column;
   z-index: 10;
-  flex-shrink: 0;
-  border-right: 1px solid rgba(255,255,255,.08);
 }
 .tiq-brand-v {
   padding: 24px 20px 20px;
@@ -346,7 +351,7 @@ a { color: var(--brand); text-decoration: none; }
 .tiq-btn-link:hover { background: var(--brand-light); }
 
 /* ─── Page heads ────────────────────────────────────────── */
-.tiq-page { display: flex; flex-direction: column; gap: 24px; }
+.tiq-page { display: flex; flex-direction: column; gap: 24px; min-width: 0; }
 .tiq-page-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
 .tiq-eyebrow { font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--brand); margin-bottom: 6px; }
 .tiq-h1 { font-size: 26px; font-weight: 700; letter-spacing: -.025em; margin: 0; color: var(--text); }
@@ -553,7 +558,9 @@ a { color: var(--brand); text-decoration: none; }
   font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 99px;
 }
 .tiq-flag-pill svg { width: 12px; height: 12px; }
-.tiq-app-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
+.tiq-app-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
+.tiq-detail-grid { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 20px; align-items: start; }
+@media (max-width: 900px) { .tiq-detail-grid { grid-template-columns: 1fr; } }
 .tiq-app-cell-wide { grid-column: 1 / -1; }
 .tiq-cell-label { font-size: 11px; color: var(--text-muted); font-weight: 500; text-transform: uppercase; letter-spacing: .04em; margin-bottom: 4px; }
 .tiq-cell-value { font-size: 13px; font-weight: 600; color: var(--text); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
@@ -919,9 +926,13 @@ a { color: var(--brand); text-decoration: none; }
 .tiq-drawer-stat-val { font-size: 18px; font-weight: 700; margin-top: 4px; display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
 .tiq-drawer-section { padding: 18px 24px; border-bottom: 1px solid var(--border); }
 .tiq-drawer-section h4 { margin: 0 0 12px; font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--text-muted); }
-.tiq-dl { display: grid; grid-template-columns: 130px 1fr; gap: 8px 16px; margin: 0; font-size: 13px; }
+.tiq-dl { display: grid; grid-template-columns: 150px 1fr; gap: 10px 16px; margin: 0; font-size: 13px; }
 .tiq-dl dt { color: var(--text-muted); }
-.tiq-dl dd { margin: 0; font-weight: 500; color: var(--text); }
+.tiq-dl dd { margin: 0; font-weight: 500; color: var(--text); word-break: break-word; }
+/* padding when dl / app-grid sit directly inside a card (no extra wrapper) */
+.tiq-card > .tiq-dl { padding: 0 22px 12px; }
+.tiq-card > .tiq-app-grid { padding-left: 22px; padding-right: 22px; padding-bottom: 12px; }
+.tiq-card > .tiq-app-flags { padding: 0 22px 12px; }
 .tiq-drawer-docs { display: flex; flex-direction: column; gap: 8px; }
 .tiq-drawer-doc { display: flex; align-items: center; gap: 12px; padding: 10px; background: var(--bg); border-radius: 8px; }
 .tiq-drawer-doc > div:nth-child(2) { flex: 1; }

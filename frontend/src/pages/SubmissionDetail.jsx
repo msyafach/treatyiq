@@ -171,9 +171,9 @@ export default function SubmissionDetail() {
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 20, alignItems: 'start' }}>
+      <div className="tiq-detail-grid">
         {/* Main detail card */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16, minWidth: 0 }}>
           <section className="tiq-card">
             <div className="tiq-card-head">
               <h3 className="tiq-card-title">Identitas vendor</h3>
